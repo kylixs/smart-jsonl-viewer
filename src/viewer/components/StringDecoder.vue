@@ -153,6 +153,10 @@ import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
 import { isCode, detectLanguage, SUPPORTED_LANGUAGES, type LanguageType } from '../utils/codeDetector'
 import { highlightCode } from '../utils/syntaxHighlight'
 
+// 导入 highlight.js 主题样式
+import 'highlight.js/styles/github.css' // 亮色主题
+import 'highlight.js/styles/github-dark.css' // 暗色主题
+
 interface Props {
   value: any
   nodeKey?: string
@@ -735,54 +739,10 @@ onUnmounted(() => {
   color: #24292f;
 }
 
-/* 代码高亮颜色主题 */
-.code-highlight :deep(.keyword) {
-  color: #d73a49;
-  font-weight: 600;
-}
-
-.code-highlight :deep(.string) {
-  color: #032f62;
-}
-
-.code-highlight :deep(.comment) {
-  color: #6a737d;
-  font-style: italic;
-}
-
-.code-highlight :deep(.number) {
-  color: #005cc5;
-}
-
-.code-highlight :deep(.function) {
-  color: #6f42c1;
-  font-weight: 600;
-}
-
-.code-highlight :deep(.variable) {
-  color: #e36209;
-}
-
-.code-highlight :deep(.property) {
-  color: #005cc5;
-}
-
-.code-highlight :deep(.tag) {
-  color: #22863a;
-}
-
-.code-highlight :deep(.attribute) {
-  color: #6f42c1;
-}
-
-.code-highlight :deep(.selector) {
-  color: #6f42c1;
-  font-weight: 600;
-}
-
-.code-highlight :deep(.decorator) {
-  color: #e36209;
-  font-style: italic;
+/* 暗色主题下使用 github-dark 样式 */
+:root.dark .code-highlight {
+  background: #0d1117;
+  color: #c9d1d9;
 }
 
 /* Markdown 容器 - 支持侧边目录布局 */
@@ -1174,56 +1134,6 @@ onUnmounted(() => {
 :root.dark .language-selector:focus {
   border-color: #569cd6;
   box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.2);
-}
-
-/* 代码高亮暗色主题 */
-:root.dark .code-highlight {
-  background: #1e1e1e;
-  color: #d4d4d4;
-}
-
-:root.dark .code-highlight :deep(.keyword) {
-  color: #569cd6;
-}
-
-:root.dark .code-highlight :deep(.string) {
-  color: #ce9178;
-}
-
-:root.dark .code-highlight :deep(.comment) {
-  color: #6a9955;
-}
-
-:root.dark .code-highlight :deep(.number) {
-  color: #b5cea8;
-}
-
-:root.dark .code-highlight :deep(.function) {
-  color: #dcdcaa;
-}
-
-:root.dark .code-highlight :deep(.variable) {
-  color: #9cdcfe;
-}
-
-:root.dark .code-highlight :deep(.property) {
-  color: #9cdcfe;
-}
-
-:root.dark .code-highlight :deep(.tag) {
-  color: #569cd6;
-}
-
-:root.dark .code-highlight :deep(.attribute) {
-  color: #9cdcfe;
-}
-
-:root.dark .code-highlight :deep(.selector) {
-  color: #d7ba7d;
-}
-
-:root.dark .code-highlight :deep(.decorator) {
-  color: #dcdcaa;
 }
 
 /* 目录导航暗色主题 */

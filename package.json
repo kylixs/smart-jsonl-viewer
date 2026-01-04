@@ -9,7 +9,13 @@
     "postbuild": "bash scripts/post-build.sh",
     "preview": "vite preview"
   },
-  "keywords": ["jsonl", "viewer", "chrome-extension", "json", "decoder"],
+  "keywords": [
+    "jsonl",
+    "viewer",
+    "chrome-extension",
+    "json",
+    "decoder"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -21,6 +27,7 @@
     "vue-tsc": "^3.2.1"
   },
   "dependencies": {
+    "highlight.js": "^11.11.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.26"
   }

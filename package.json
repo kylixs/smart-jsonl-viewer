@@ -1,0 +1,27 @@
+{
+  "name": "jsonline-viewer",
+  "version": "1.1.0",
+  "description": "智能 JSONL 查看器 Chrome 扩展，支持字符串解码和高级过滤",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build && npm run postbuild",
+    "postbuild": "bash scripts/post-build.sh",
+    "preview": "vite preview"
+  },
+  "keywords": ["jsonl", "viewer", "chrome-extension", "json", "decoder"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.1.32",
+    "@types/node": "^25.0.3",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "vue-tsc": "^3.2.1"
+  },
+  "dependencies": {
+    "pinia": "^3.0.4",
+    "vue": "^3.5.26"
+  }
+}

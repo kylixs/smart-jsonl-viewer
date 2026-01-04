@@ -50,8 +50,8 @@
         <div class="modal-header">
           <h3>解码内容</h3>
 
-          <!-- Tab 切换栏 - 只有当内容是 Markdown 时才显示，放在标题右侧 -->
-          <div v-if="isMarkdownContent && decodedType === 'string'" class="modal-tabs">
+          <!-- Tab 切换栏 - 放在标题右侧 -->
+          <div v-if="(isMarkdownContent || isCodeContent) && decodedType === 'string'" class="modal-tabs">
             <button
               class="modal-tab"
               :class="{ active: modalViewMode === 'raw' }"
@@ -60,6 +60,15 @@
               原始内容
             </button>
             <button
+              v-if="isCodeContent"
+              class="modal-tab"
+              :class="{ active: modalViewMode === 'code' }"
+              @click="modalViewMode = 'code'"
+            >
+              代码高亮
+            </button>
+            <button
+              v-if="isMarkdownContent"
               class="modal-tab"
               :class="{ active: modalViewMode === 'markdown' }"
               @click="modalViewMode = 'markdown'"
@@ -67,6 +76,18 @@
               Markdown 预览
             </button>
           </div>
+
+          <!-- 语言选择器（仅代码视图显示） -->
+          <select
+            v-if="isCodeContent && modalViewMode === 'code'"
+            v-model="selectedLanguage"
+            class="language-selector"
+            title="选择编程语言"
+          >
+            <option v-for="lang in SUPPORTED_LANGUAGES" :key="lang.value" :value="lang.value">
+              {{ lang.label }}
+            </option>
+          </select>
 
           <button class="modal-close" @click="showModal = false">✕</button>
         </div>
@@ -81,6 +102,9 @@
           <template v-else>
             <!-- 原始内容视图 -->
             <pre v-if="modalViewMode === 'raw'" class="modal-text"><AnsiText :text="decodedValue" /></pre>
+
+            <!-- 代码高亮视图 -->
+            <pre v-else-if="modalViewMode === 'code'" class="code-highlight" v-html="highlightedCode"></pre>
 
             <!-- Markdown 预览视图 -->
             <div v-else-if="modalViewMode === 'markdown'" class="markdown-container">
@@ -110,7 +134,7 @@
                 @click="showToc = true"
                 title="显示目录"
               >
-                📑 目录
+                📑
               </button>
 
               <!-- Markdown 内容 -->
@@ -132,6 +156,8 @@ import { stripAnsi } from '../utils/ansi'
 import { useJsonlStore } from '../stores/jsonlStore'
 import { copyToClipboard } from '../utils/clipboard'
 import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
+import { isCode, detectLanguage, SUPPORTED_LANGUAGES, type LanguageType } from '../utils/codeDetector'
+import { highlightCode } from '../utils/syntaxHighlight'
 
 interface Props {
   value: any
@@ -145,8 +171,9 @@ const displayMode = ref<'original' | 'decoded'>('decoded')
 const copySuccess = ref(false)
 const copyError = ref('')
 const showModal = ref(false)
-const modalViewMode = ref<'raw' | 'markdown'>('raw')
+const modalViewMode = ref<'raw' | 'markdown' | 'code'>('raw')
 const showToc = ref(true)
+const selectedLanguage = ref<LanguageType>('plaintext')
 
 // 值类型
 const valueType = computed(() => {
@@ -249,11 +276,33 @@ const isMarkdownContent = computed(() => {
   return isMarkdown(decodedValue.value)
 })
 
+// 检测解码后的内容是否为代码
+const isCodeContent = computed(() => {
+  if (decodedType.value !== 'string') return false
+  return isCode(decodedValue.value)
+})
+
 // 渲染后的 Markdown HTML
 const markdownHtml = computed(() => {
   if (!isMarkdownContent.value) return ''
   return renderMarkdown(decodedValue.value)
 })
+
+// 渲染后的代码 HTML（语法高亮）
+const highlightedCode = computed(() => {
+  if (!isCodeContent.value) return escapeHtml(decodedValue.value)
+  return highlightCode(decodedValue.value, selectedLanguage.value)
+})
+
+// 辅助函数：转义 HTML
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
 
 // 生成 Markdown 目录
 const markdownToc = computed(() => {
@@ -266,11 +315,21 @@ const shouldShowToc = computed(() => {
   return markdownToc.value.length >= 2
 })
 
-// 弹窗打开时重置视图模式
+// 弹窗打开时重置视图模式并自动检测内容类型
 watch(showModal, (isOpen) => {
   if (isOpen) {
-    modalViewMode.value = 'raw'
     showToc.value = true
+
+    // 自动选择合适的视图模式
+    if (isCodeContent.value) {
+      modalViewMode.value = 'code'
+      // 自动检测编程语言
+      selectedLanguage.value = detectLanguage(decodedValue.value)
+    } else if (isMarkdownContent.value) {
+      modalViewMode.value = 'markdown'
+    } else {
+      modalViewMode.value = 'raw'
+    }
   }
 })
 
@@ -601,6 +660,28 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
+/* 语言选择器 */
+.language-selector {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #333;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.language-selector:hover {
+  border-color: #999;
+}
+
+.language-selector:focus {
+  border-color: #2472c8;
+  box-shadow: 0 0 0 2px rgba(36, 114, 200, 0.1);
+}
+
 .modal-body {
   flex: 1;
   overflow: auto;
@@ -620,6 +701,69 @@ onUnmounted(() => {
   word-break: break-word;
   margin: 0;
   color: #ce9178;
+}
+
+/* 代码高亮样式 */
+.code-highlight {
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0;
+  color: #24292f;
+}
+
+/* 代码高亮颜色主题 */
+.code-highlight :deep(.keyword) {
+  color: #d73a49;
+  font-weight: 600;
+}
+
+.code-highlight :deep(.string) {
+  color: #032f62;
+}
+
+.code-highlight :deep(.comment) {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.code-highlight :deep(.number) {
+  color: #005cc5;
+}
+
+.code-highlight :deep(.function) {
+  color: #6f42c1;
+  font-weight: 600;
+}
+
+.code-highlight :deep(.variable) {
+  color: #e36209;
+}
+
+.code-highlight :deep(.property) {
+  color: #005cc5;
+}
+
+.code-highlight :deep(.tag) {
+  color: #22863a;
+}
+
+.code-highlight :deep(.attribute) {
+  color: #6f42c1;
+}
+
+.code-highlight :deep(.selector) {
+  color: #6f42c1;
+  font-weight: 600;
+}
+
+.code-highlight :deep(.decorator) {
+  color: #e36209;
+  font-style: italic;
 }
 
 /* Markdown 容器 - 支持侧边目录布局 */
@@ -727,26 +871,32 @@ onUnmounted(() => {
   font-size: 11px;
 }
 
-/* 显示目录按钮 */
+/* 显示目录按钮 - 紧凑图标样式 */
 .toc-show-btn {
   position: fixed;
-  left: 32px;
-  top: 90px;
-  padding: 8px 16px;
+  left: 24px;
+  top: 24px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   background: #2472c8;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.2s;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .toc-show-btn:hover {
   background: #1a5fb4;
-  transform: translateY(-1px);
+  transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -979,6 +1129,72 @@ onUnmounted(() => {
 
 :root.dark .modal-text {
   color: #ce9178;
+}
+
+/* 语言选择器暗色主题 */
+:root.dark .language-selector {
+  background: #333;
+  border-color: #555;
+  color: #ddd;
+}
+
+:root.dark .language-selector:hover {
+  border-color: #777;
+}
+
+:root.dark .language-selector:focus {
+  border-color: #569cd6;
+  box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.2);
+}
+
+/* 代码高亮暗色主题 */
+:root.dark .code-highlight {
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+:root.dark .code-highlight :deep(.keyword) {
+  color: #569cd6;
+}
+
+:root.dark .code-highlight :deep(.string) {
+  color: #ce9178;
+}
+
+:root.dark .code-highlight :deep(.comment) {
+  color: #6a9955;
+}
+
+:root.dark .code-highlight :deep(.number) {
+  color: #b5cea8;
+}
+
+:root.dark .code-highlight :deep(.function) {
+  color: #dcdcaa;
+}
+
+:root.dark .code-highlight :deep(.variable) {
+  color: #9cdcfe;
+}
+
+:root.dark .code-highlight :deep(.property) {
+  color: #9cdcfe;
+}
+
+:root.dark .code-highlight :deep(.tag) {
+  color: #569cd6;
+}
+
+:root.dark .code-highlight :deep(.attribute) {
+  color: #9cdcfe;
+}
+
+:root.dark .code-highlight :deep(.selector) {
+  color: #d7ba7d;
+}
+
+:root.dark .code-highlight :deep(.decorator) {
+  color: #dcdcaa;
 }
 
 /* 目录导航暗色主题 */

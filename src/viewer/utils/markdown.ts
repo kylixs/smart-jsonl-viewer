@@ -4,6 +4,51 @@
  */
 
 /**
+ * 标题项接口
+ */
+export interface TocItem {
+  id: string
+  text: string
+  level: number
+}
+
+/**
+ * 生成目录结构
+ */
+export function generateToc(markdown: string): TocItem[] {
+  if (!markdown) return []
+
+  const toc: TocItem[] = []
+  const lines = markdown.split('\n')
+
+  for (const line of lines) {
+    const match = line.match(/^(#{1,6})\s+(.+)$/)
+    if (match) {
+      const level = match[1].length
+      const text = match[2].trim()
+      const id = generateHeadingId(text)
+
+      toc.push({ id, text, level })
+    }
+  }
+
+  return toc
+}
+
+/**
+ * 从文本生成标题 ID
+ */
+function generateHeadingId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5\s-]/g, '') // 保留字母、数字、中文、空格和连字符
+    .replace(/\s+/g, '-') // 空格转连字符
+    .replace(/-+/g, '-') // 多个连字符合并为一个
+    .replace(/^-|-$/g, '') // 移除首尾连字符
+    || 'heading'
+}
+
+/**
  * 检测文本是否可能是 Markdown 格式
  */
 export function isMarkdown(text: string): boolean {
@@ -61,13 +106,31 @@ export function renderMarkdown(markdown: string): string {
   // 行内代码
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
 
-  // 标题
-  html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
-  html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
-  html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
-  html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
+  // 标题 - 添加 ID 以支持锚点跳转
+  html = html.replace(/^######\s+(.+)$/gm, (_match, text) => {
+    const id = generateHeadingId(text)
+    return `<h6 id="${id}">${text}</h6>`
+  })
+  html = html.replace(/^#####\s+(.+)$/gm, (_match, text) => {
+    const id = generateHeadingId(text)
+    return `<h5 id="${id}">${text}</h5>`
+  })
+  html = html.replace(/^####\s+(.+)$/gm, (_match, text) => {
+    const id = generateHeadingId(text)
+    return `<h4 id="${id}">${text}</h4>`
+  })
+  html = html.replace(/^###\s+(.+)$/gm, (_match, text) => {
+    const id = generateHeadingId(text)
+    return `<h3 id="${id}">${text}</h3>`
+  })
+  html = html.replace(/^##\s+(.+)$/gm, (_match, text) => {
+    const id = generateHeadingId(text)
+    return `<h2 id="${id}">${text}</h2>`
+  })
+  html = html.replace(/^#\s+(.+)$/gm, (_match, text) => {
+    const id = generateHeadingId(text)
+    return `<h1 id="${id}">${text}</h1>`
+  })
 
   // 分隔线
   html = html.replace(/^\s*[-*_]{3,}\s*$/gm, '<hr>')

@@ -83,7 +83,39 @@
             <pre v-if="modalViewMode === 'raw'" class="modal-text"><AnsiText :text="decodedValue" /></pre>
 
             <!-- Markdown 预览视图 -->
-            <div v-else-if="modalViewMode === 'markdown'" class="markdown-preview" v-html="markdownHtml"></div>
+            <div v-else-if="modalViewMode === 'markdown'" class="markdown-container">
+              <!-- 目录导航 -->
+              <aside v-if="shouldShowToc && showToc" class="markdown-toc">
+                <div class="toc-header">
+                  <span class="toc-title">目录</span>
+                  <button class="toc-toggle" @click="showToc = false" title="隐藏目录">✕</button>
+                </div>
+                <nav class="toc-nav">
+                  <a
+                    v-for="item in markdownToc"
+                    :key="item.id"
+                    :class="['toc-link', `toc-level-${item.level}`]"
+                    @click.prevent="scrollToHeading(item.id)"
+                    :href="`#${item.id}`"
+                  >
+                    {{ item.text }}
+                  </a>
+                </nav>
+              </aside>
+
+              <!-- 显示目录按钮（当目录隐藏时） -->
+              <button
+                v-if="shouldShowToc && !showToc"
+                class="toc-show-btn"
+                @click="showToc = true"
+                title="显示目录"
+              >
+                📑 目录
+              </button>
+
+              <!-- Markdown 内容 -->
+              <div class="markdown-preview" :class="{ 'with-toc': shouldShowToc && showToc }" v-html="markdownHtml"></div>
+            </div>
           </template>
         </div>
       </div>
@@ -99,7 +131,7 @@ import { smartDecode, isDecodable as checkDecodable } from '../utils/decoder'
 import { stripAnsi } from '../utils/ansi'
 import { useJsonlStore } from '../stores/jsonlStore'
 import { copyToClipboard } from '../utils/clipboard'
-import { isMarkdown, renderMarkdown } from '../utils/markdown'
+import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
 
 interface Props {
   value: any
@@ -114,6 +146,7 @@ const copySuccess = ref(false)
 const copyError = ref('')
 const showModal = ref(false)
 const modalViewMode = ref<'raw' | 'markdown'>('raw')
+const showToc = ref(true)
 
 // 值类型
 const valueType = computed(() => {
@@ -222,12 +255,32 @@ const markdownHtml = computed(() => {
   return renderMarkdown(decodedValue.value)
 })
 
+// 生成 Markdown 目录
+const markdownToc = computed(() => {
+  if (!isMarkdownContent.value) return []
+  return generateToc(decodedValue.value)
+})
+
+// 是否显示目录（至少有 2 个标题才显示）
+const shouldShowToc = computed(() => {
+  return markdownToc.value.length >= 2
+})
+
 // 弹窗打开时重置视图模式
 watch(showModal, (isOpen) => {
   if (isOpen) {
     modalViewMode.value = 'raw'
+    showToc.value = true
   }
 })
+
+// 跳转到指定标题
+function scrollToHeading(id: string) {
+  const element = document.getElementById(id)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
 
 function toggleMode() {
   displayMode.value = displayMode.value === 'original' ? 'decoded' : 'original'
@@ -552,6 +605,7 @@ onUnmounted(() => {
   flex: 1;
   overflow: auto;
   padding: 24px;
+  position: relative;
 }
 
 .modal-json {
@@ -568,14 +622,159 @@ onUnmounted(() => {
   color: #ce9178;
 }
 
+/* Markdown 容器 - 支持侧边目录布局 */
+.markdown-container {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  min-height: 100%;
+}
+
+/* Markdown 目录导航 */
+.markdown-toc {
+  flex-shrink: 0;
+  width: 240px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+}
+
+.toc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.toc-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.toc-toggle {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.toc-toggle:hover {
+  color: #666;
+}
+
+.toc-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toc-link {
+  display: block;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.2s;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.toc-link:hover {
+  background: #e8e9eb;
+  color: #333;
+}
+
+/* 不同层级的目录缩进 */
+.toc-link.toc-level-1 {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.toc-link.toc-level-2 {
+  padding-left: 16px;
+}
+
+.toc-link.toc-level-3 {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+.toc-link.toc-level-4 {
+  padding-left: 32px;
+  font-size: 12px;
+}
+
+.toc-link.toc-level-5 {
+  padding-left: 40px;
+  font-size: 11px;
+}
+
+.toc-link.toc-level-6 {
+  padding-left: 48px;
+  font-size: 11px;
+}
+
+/* 显示目录按钮 */
+.toc-show-btn {
+  position: fixed;
+  left: 32px;
+  top: 90px;
+  padding: 8px 16px;
+  background: #2472c8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.toc-show-btn:hover {
+  background: #1a5fb4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 /* Markdown 预览样式 */
 .markdown-preview {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.6;
   color: #333;
+  flex: 1;
+  min-width: 0;
+  scroll-behavior: smooth;
+}
+
+/* 当有目录时，限制最大宽度 */
+.markdown-preview.with-toc {
   max-width: 980px;
   margin: 0 auto;
+}
+
+/* 为标题添加滚动偏移，避免被遮挡 */
+.markdown-preview :deep(h1),
+.markdown-preview :deep(h2),
+.markdown-preview :deep(h3),
+.markdown-preview :deep(h4),
+.markdown-preview :deep(h5),
+.markdown-preview :deep(h6) {
+  scroll-margin-top: 20px;
 }
 
 .markdown-preview :deep(h1),
@@ -780,6 +979,45 @@ onUnmounted(() => {
 
 :root.dark .modal-text {
   color: #ce9178;
+}
+
+/* 目录导航暗色主题 */
+:root.dark .markdown-toc {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+:root.dark .toc-header {
+  border-bottom-color: #444;
+}
+
+:root.dark .toc-title {
+  color: #ddd;
+}
+
+:root.dark .toc-toggle {
+  color: #666;
+}
+
+:root.dark .toc-toggle:hover {
+  color: #999;
+}
+
+:root.dark .toc-link {
+  color: #999;
+}
+
+:root.dark .toc-link:hover {
+  background: #333;
+  color: #ddd;
+}
+
+:root.dark .toc-show-btn {
+  background: #569cd6;
+}
+
+:root.dark .toc-show-btn:hover {
+  background: #4a8ec2;
 }
 
 /* Markdown 预览暗色主题 */

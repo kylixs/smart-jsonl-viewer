@@ -88,13 +88,14 @@
                   <input
                     type="text"
                     v-model="languageSearchQuery"
-                    @focus="showLanguageDropdown = true"
+                    @focus="handleInputFocus"
                     @blur="handleLanguageSelectorBlur"
                     @input="showLanguageDropdown = true"
                     class="language-search-input"
-                    placeholder="搜索语言..."
-                    title="输入语言名称进行搜索"
+                    placeholder="选择或搜索语言..."
+                    title="选择或输入语言名称进行搜索"
                   />
+                  <span class="dropdown-arrow" @mousedown.prevent="toggleDropdown">▼</span>
                   <div v-if="showLanguageDropdown" class="language-dropdown">
                     <div
                       v-for="lang in filteredLanguages"
@@ -409,6 +410,20 @@ function selectLanguage(language: LanguageType) {
     languageSearchQuery.value = lang.label
   }
   showLanguageDropdown.value = false
+}
+
+// 切换下拉框显示状态
+function toggleDropdown() {
+  showLanguageDropdown.value = !showLanguageDropdown.value
+  // 展开或关闭时都不改变输入框内容，保持当前显示的语言名称
+}
+
+// 处理输入框聚焦
+function handleInputFocus(event: FocusEvent) {
+  showLanguageDropdown.value = true
+  // 选中输入框中的所有文本，方便用户直接输入替换
+  const input = event.target as HTMLInputElement
+  input.select()
 }
 
 // 处理语言选择器失焦
@@ -787,7 +802,7 @@ onUnmounted(() => {
 /* 语言搜索输入框 */
 .language-search-input {
   width: 100%;
-  padding: 6px 12px;
+  padding: 6px 32px 6px 12px; /* 右侧留空间给下拉箭头 */
   font-size: 13px;
   background: #fff;
   border: 1px solid #d0d0d0;
@@ -805,6 +820,25 @@ onUnmounted(() => {
 .language-search-input:focus {
   border-color: #2472c8;
   box-shadow: 0 0 0 2px rgba(36, 114, 200, 0.1);
+}
+
+/* 下拉箭头 */
+.dropdown-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.dropdown-arrow:hover {
+  color: #333;
 }
 
 /* 语言下拉列表 */
@@ -1266,6 +1300,14 @@ onUnmounted(() => {
 :root.dark .language-search-input:focus {
   border-color: #569cd6;
   box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.2);
+}
+
+:root.dark .dropdown-arrow {
+  color: #999;
+}
+
+:root.dark .dropdown-arrow:hover {
+  color: #ddd;
 }
 
 :root.dark .language-dropdown {

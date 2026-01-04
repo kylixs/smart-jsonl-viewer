@@ -84,15 +84,32 @@
               <!-- 语言选择器（仅当检测到代码时显示） -->
               <div v-if="isCodeContent" class="code-toolbar">
                 <label class="code-toolbar-label">编程语言：</label>
-                <select
-                  v-model="selectedLanguage"
-                  class="language-selector"
-                  title="选择编程语言"
-                >
-                  <option v-for="lang in SUPPORTED_LANGUAGES" :key="lang.value" :value="lang.value">
-                    {{ lang.label }}
-                  </option>
-                </select>
+                <div class="language-selector-wrapper">
+                  <input
+                    type="text"
+                    v-model="languageSearchQuery"
+                    @focus="showLanguageDropdown = true"
+                    @blur="handleLanguageSelectorBlur"
+                    @input="showLanguageDropdown = true"
+                    class="language-search-input"
+                    placeholder="搜索语言..."
+                    title="输入语言名称进行搜索"
+                  />
+                  <div v-if="showLanguageDropdown" class="language-dropdown">
+                    <div
+                      v-for="lang in filteredLanguages"
+                      :key="lang.value"
+                      class="language-option"
+                      :class="{ selected: selectedLanguage === lang.value }"
+                      @mousedown.prevent="selectLanguage(lang.value)"
+                    >
+                      {{ lang.label }}
+                    </div>
+                    <div v-if="filteredLanguages.length === 0" class="language-option-empty">
+                      未找到匹配的语言
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- 代码高亮显示或普通文本显示 -->
@@ -172,6 +189,8 @@ const showModal = ref(false)
 const modalViewMode = ref<'raw' | 'markdown'>('raw')
 const showToc = ref(true)
 const selectedLanguage = ref<LanguageType>('plaintext')
+const languageSearchQuery = ref('')
+const showLanguageDropdown = ref(false)
 
 // 值类型
 const valueType = computed(() => {
@@ -313,6 +332,35 @@ const shouldShowToc = computed(() => {
   return markdownToc.value.length >= 2
 })
 
+// 过滤后的语言列表（支持搜索，Plain Text 始终在第一位，其他按字母排序）
+const filteredLanguages = computed(() => {
+  const query = languageSearchQuery.value.toLowerCase().trim()
+
+  // 如果没有搜索词，返回完整列表（Plain Text 第一位，其他按字母排序）
+  if (!query) {
+    const plaintext = SUPPORTED_LANGUAGES[0] // Plain Text
+    const others = SUPPORTED_LANGUAGES.slice(1).sort((a, b) => a.label.localeCompare(b.label))
+    return [plaintext, ...others]
+  }
+
+  // 过滤并排序
+  const filtered = SUPPORTED_LANGUAGES.filter(lang =>
+    lang.label.toLowerCase().includes(query) || lang.value.toLowerCase().includes(query)
+  )
+
+  // Plain Text 匹配时放第一位，其他按字母排序
+  const plaintext = filtered.find(lang => lang.value === 'plaintext')
+  const others = filtered.filter(lang => lang.value !== 'plaintext').sort((a, b) => a.label.localeCompare(b.label))
+
+  return plaintext ? [plaintext, ...others] : others
+})
+
+// 根据当前选择的语言，显示对应的名称
+const selectedLanguageLabel = computed(() => {
+  const lang = SUPPORTED_LANGUAGES.find(l => l.value === selectedLanguage.value)
+  return lang ? lang.label : 'Unknown'
+})
+
 // 弹窗打开时重置视图模式并自动检测内容类型
 watch(showModal, (isOpen) => {
   if (isOpen) {
@@ -324,11 +372,24 @@ watch(showModal, (isOpen) => {
       modalViewMode.value = 'raw'
       // 自动检测编程语言
       selectedLanguage.value = detectLanguage(decodedValue.value)
+      // 初始化语言搜索框显示当前选择的语言
+      languageSearchQuery.value = selectedLanguageLabel.value
     } else if (isMarkdownContent.value) {
       modalViewMode.value = 'markdown'
     } else {
       modalViewMode.value = 'raw'
     }
+
+    // 重置下拉框状态
+    showLanguageDropdown.value = false
+  }
+})
+
+// 监听语言选择变化，更新搜索框显示
+watch(selectedLanguage, (newLang) => {
+  const lang = SUPPORTED_LANGUAGES.find(l => l.value === newLang)
+  if (lang && !showLanguageDropdown.value) {
+    languageSearchQuery.value = lang.label
   }
 })
 
@@ -338,6 +399,26 @@ function scrollToHeading(id: string) {
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+}
+
+// 选择语言
+function selectLanguage(language: LanguageType) {
+  selectedLanguage.value = language
+  const lang = SUPPORTED_LANGUAGES.find(l => l.value === language)
+  if (lang) {
+    languageSearchQuery.value = lang.label
+  }
+  showLanguageDropdown.value = false
+}
+
+// 处理语言选择器失焦
+function handleLanguageSelectorBlur() {
+  // 延迟关闭，以便点击事件能够触发
+  setTimeout(() => {
+    showLanguageDropdown.value = false
+    // 恢复显示当前选择的语言名称
+    languageSearchQuery.value = selectedLanguageLabel.value
+  }, 200)
 }
 
 function toggleMode() {
@@ -659,28 +740,6 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-/* 语言选择器 */
-.language-selector {
-  padding: 6px 12px;
-  font-size: 13px;
-  background: #fff;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  cursor: pointer;
-  color: #333;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.language-selector:hover {
-  border-color: #999;
-}
-
-.language-selector:focus {
-  border-color: #2472c8;
-  box-shadow: 0 0 0 2px rgba(36, 114, 200, 0.1);
-}
-
 .modal-body {
   flex: 1;
   overflow: auto;
@@ -715,6 +774,79 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 500;
   color: #333;
+  flex-shrink: 0;
+}
+
+/* 语言选择器容器 */
+.language-selector-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+
+/* 语言搜索输入框 */
+.language-search-input {
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  cursor: text;
+  color: #333;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.language-search-input:hover {
+  border-color: #999;
+}
+
+.language-search-input:focus {
+  border-color: #2472c8;
+  box-shadow: 0 0 0 2px rgba(36, 114, 200, 0.1);
+}
+
+/* 语言下拉列表 */
+.language-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+/* 语言选项 */
+.language-option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.language-option:hover {
+  background: #f0f0f0;
+}
+
+.language-option.selected {
+  background: #e3f2fd;
+  color: #2472c8;
+  font-weight: 500;
+}
+
+.language-option-empty {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  font-style: italic;
 }
 
 .modal-text {
@@ -1121,19 +1253,42 @@ onUnmounted(() => {
 }
 
 /* 语言选择器暗色主题 */
-:root.dark .language-selector {
+:root.dark .language-search-input {
   background: #333;
   border-color: #555;
   color: #ddd;
 }
 
-:root.dark .language-selector:hover {
+:root.dark .language-search-input:hover {
   border-color: #777;
 }
 
-:root.dark .language-selector:focus {
+:root.dark .language-search-input:focus {
   border-color: #569cd6;
   box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.2);
+}
+
+:root.dark .language-dropdown {
+  background: #2a2a2a;
+  border-color: #444;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+:root.dark .language-option {
+  color: #ddd;
+}
+
+:root.dark .language-option:hover {
+  background: #333;
+}
+
+:root.dark .language-option.selected {
+  background: #1e4d7b;
+  color: #4fc3f7;
+}
+
+:root.dark .language-option-empty {
+  color: #666;
 }
 
 /* 目录导航暗色主题 */

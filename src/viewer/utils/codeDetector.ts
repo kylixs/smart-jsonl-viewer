@@ -6,6 +6,7 @@
  * 支持的编程语言
  */
 export const SUPPORTED_LANGUAGES = [
+  { value: 'plaintext', label: 'Plain Text', extensions: ['.txt'] },
   { value: 'javascript', label: 'JavaScript', extensions: ['.js', '.jsx', '.mjs'] },
   { value: 'typescript', label: 'TypeScript', extensions: ['.ts', '.tsx'] },
   { value: 'python', label: 'Python', extensions: ['.py'] },
@@ -26,7 +27,6 @@ export const SUPPORTED_LANGUAGES = [
   { value: 'kotlin', label: 'Kotlin', extensions: ['.kt'] },
   { value: 'xml', label: 'XML', extensions: ['.xml'] },
   { value: 'markdown', label: 'Markdown', extensions: ['.md'] },
-  { value: 'plaintext', label: 'Plain Text', extensions: ['.txt'] },
 ] as const
 
 export type LanguageType = typeof SUPPORTED_LANGUAGES[number]['value']

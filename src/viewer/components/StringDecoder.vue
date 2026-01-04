@@ -51,7 +51,7 @@
           <h3>解码内容</h3>
 
           <!-- Tab 切换栏 - 放在标题右侧 -->
-          <div v-if="(isMarkdownContent || isCodeContent) && decodedType === 'string'" class="modal-tabs">
+          <div v-if="isMarkdownContent && decodedType === 'string'" class="modal-tabs">
             <button
               class="modal-tab"
               :class="{ active: modalViewMode === 'raw' }"
@@ -60,15 +60,6 @@
               原始内容
             </button>
             <button
-              v-if="isCodeContent"
-              class="modal-tab"
-              :class="{ active: modalViewMode === 'code' }"
-              @click="modalViewMode = 'code'"
-            >
-              代码高亮
-            </button>
-            <button
-              v-if="isMarkdownContent"
               class="modal-tab"
               :class="{ active: modalViewMode === 'markdown' }"
               @click="modalViewMode = 'markdown'"
@@ -76,18 +67,6 @@
               Markdown 预览
             </button>
           </div>
-
-          <!-- 语言选择器（仅代码视图显示） -->
-          <select
-            v-if="isCodeContent && modalViewMode === 'code'"
-            v-model="selectedLanguage"
-            class="language-selector"
-            title="选择编程语言"
-          >
-            <option v-for="lang in SUPPORTED_LANGUAGES" :key="lang.value" :value="lang.value">
-              {{ lang.label }}
-            </option>
-          </select>
 
           <button class="modal-close" @click="showModal = false">✕</button>
         </div>
@@ -101,10 +80,25 @@
           <!-- 字符串类型内容 -->
           <template v-else>
             <!-- 原始内容视图 -->
-            <pre v-if="modalViewMode === 'raw'" class="modal-text"><AnsiText :text="decodedValue" /></pre>
+            <div v-if="modalViewMode === 'raw'" class="raw-content-container">
+              <!-- 语言选择器（仅当检测到代码时显示） -->
+              <div v-if="isCodeContent" class="code-toolbar">
+                <label class="code-toolbar-label">编程语言：</label>
+                <select
+                  v-model="selectedLanguage"
+                  class="language-selector"
+                  title="选择编程语言"
+                >
+                  <option v-for="lang in SUPPORTED_LANGUAGES" :key="lang.value" :value="lang.value">
+                    {{ lang.label }}
+                  </option>
+                </select>
+              </div>
 
-            <!-- 代码高亮视图 -->
-            <pre v-else-if="modalViewMode === 'code'" class="code-highlight" v-html="highlightedCode"></pre>
+              <!-- 代码高亮显示或普通文本显示 -->
+              <pre v-if="isCodeContent" class="code-highlight" v-html="highlightedCode"></pre>
+              <pre v-else class="modal-text"><AnsiText :text="decodedValue" /></pre>
+            </div>
 
             <!-- Markdown 预览视图 -->
             <div v-else-if="modalViewMode === 'markdown'" class="markdown-container">
@@ -171,7 +165,7 @@ const displayMode = ref<'original' | 'decoded'>('decoded')
 const copySuccess = ref(false)
 const copyError = ref('')
 const showModal = ref(false)
-const modalViewMode = ref<'raw' | 'markdown' | 'code'>('raw')
+const modalViewMode = ref<'raw' | 'markdown'>('raw')
 const showToc = ref(true)
 const selectedLanguage = ref<LanguageType>('plaintext')
 
@@ -321,14 +315,15 @@ watch(showModal, (isOpen) => {
     showToc.value = true
 
     // 自动选择合适的视图模式
-    if (isCodeContent.value) {
-      modalViewMode.value = 'code'
-      // 自动检测编程语言
-      selectedLanguage.value = detectLanguage(decodedValue.value)
-    } else if (isMarkdownContent.value) {
+    if (isMarkdownContent.value) {
       modalViewMode.value = 'markdown'
     } else {
       modalViewMode.value = 'raw'
+    }
+
+    // 如果是代码内容，自动检测编程语言
+    if (isCodeContent.value) {
+      selectedLanguage.value = detectLanguage(decodedValue.value)
     }
   }
 })
@@ -692,6 +687,30 @@ onUnmounted(() => {
 .modal-json {
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
   font-size: 13px;
+}
+
+/* 原始内容容器 */
+.raw-content-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 代码工具栏 */
+.code-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f6f8fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.code-toolbar-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
 }
 
 .modal-text {
@@ -1129,6 +1148,16 @@ onUnmounted(() => {
 
 :root.dark .modal-text {
   color: #ce9178;
+}
+
+/* 代码工具栏暗色主题 */
+:root.dark .code-toolbar {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+:root.dark .code-toolbar-label {
+  color: #ddd;
 }
 
 /* 语言选择器暗色主题 */

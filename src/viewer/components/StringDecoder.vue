@@ -315,15 +315,15 @@ watch(showModal, (isOpen) => {
     showToc.value = true
 
     // 自动选择合适的视图模式
-    if (isMarkdownContent.value) {
+    // 优先判断代码（特别是有 shebang 的脚本），因为代码特征更明确
+    if (isCodeContent.value) {
+      modalViewMode.value = 'raw'
+      // 自动检测编程语言
+      selectedLanguage.value = detectLanguage(decodedValue.value)
+    } else if (isMarkdownContent.value) {
       modalViewMode.value = 'markdown'
     } else {
       modalViewMode.value = 'raw'
-    }
-
-    // 如果是代码内容，自动检测编程语言
-    if (isCodeContent.value) {
-      selectedLanguage.value = detectLanguage(decodedValue.value)
     }
   }
 })

@@ -101,6 +101,14 @@ export function isMarkdown(text: string): boolean {
     return false
   }
 
+  const trimmed = text.trim()
+  const firstLine = trimmed.split('\n')[0] || ''
+
+  // 如果以 shebang 开头，肯定不是 Markdown，而是脚本代码
+  if (firstLine.startsWith('#!')) {
+    return false
+  }
+
   // Markdown 特征模式
   const markdownPatterns = [
     /^#{1,6}\s+.+$/m, // 标题 (# Header)

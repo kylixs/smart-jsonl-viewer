@@ -2,3 +2,5 @@
 {"data": {"report": "# 性能报告\n\n## 概览\n\n本次测试共执行 **100** 个用例，成功率达到 **99%**。\n\n### 关键指标\n\n- 平均响应时间: `45ms`\n- 最大响应时间: `120ms`\n- 最小响应时间: `12ms`\n\n### 测试结果\n\n| 测试项 | 通过 | 失败 |\n|--------|------|------|\n| 单元测试 | 95 | 5 |\n| 集成测试 | 48 | 2 |\n| 性能测试 | 30 | 0 |\n\n## 建议\n\n1. 优化响应时间\n2. 修复失败用例\n3. 增加测试覆盖率"}}
 {"message": "普通文本内容，不包含 Markdown 格式"}
 {"log": "这是日志内容\n包含换行\n但不是 Markdown"}
+{"code_example": "# 代码块测试文档\n\n## 问题说明\n\n代码块内的 # 符号不应该被识别为标题。\n\n### Bash 脚本示例\n\n```bash\n#!/bin/bash\n# 这是 bash 注释，不是标题\n# ��含以下关键词会触发：\necho \"Hello World\"\n\n### 这也不是标题，是注释中的三个井号\nfor i in {1..5}; do\n  # 循环注释\n  echo $i\ndone\n```\n\n### Python 代码示例\n\n```python\n# -*- coding: utf-8 -*-\n# 这是 Python 注释\n\ndef hello():\n    # 函数内注释\n    print(\"Hello\")\n    \n## 这个看起来像 H2 标题，但其实是注释\nif __name__ == \"__main__\":\n    hello()\n```\n\n### 配置文件示例\n\n```yaml\n# YAML 配置文件\n# 这些都是注释，不是标题\nserver:\n  host: localhost\n  port: 8080\n  # 端口配置\n```\n\n## 真正的标题\n\n这个才是真正的 H2 标题，应该出现在目录中。\n\n### 嵌套标题\n\n这是 H3 标题，也应该在目录中。"}
+

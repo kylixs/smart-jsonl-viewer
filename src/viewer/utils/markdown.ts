@@ -20,8 +20,21 @@ export function generateToc(markdown: string): TocItem[] {
 
   const toc: TocItem[] = []
   const lines = markdown.split('\n')
+  let inCodeBlock = false
 
   for (const line of lines) {
+    // 检测代码块的开始和结束（``` 或 ~~~）
+    if (line.trim().match(/^```|^~~~/)) {
+      inCodeBlock = !inCodeBlock
+      continue
+    }
+
+    // 跳过代码块内的内容
+    if (inCodeBlock) {
+      continue
+    }
+
+    // 解析标题
     const match = line.match(/^(#{1,6})\s+(.+)$/)
     if (match) {
       const level = match[1].length

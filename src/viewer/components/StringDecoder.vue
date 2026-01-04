@@ -336,15 +336,17 @@ const shouldShowToc = computed(() => {
 // 过滤后的语言列表（支持搜索，Plain Text 始终在第一位，其他按字母排序）
 const filteredLanguages = computed(() => {
   const query = languageSearchQuery.value.toLowerCase().trim()
+  const currentLangName = selectedLanguageLabel.value.toLowerCase()
 
-  // 如果没有搜索词，返回完整列表（Plain Text 第一位，其他按字母排序）
-  if (!query) {
+  // 如果输入框的值等于当前选中的语言名称，说明用户没有输入，显示完整列表
+  // 或者输入框为空，也显示完整列表
+  if (!query || query === currentLangName) {
     const plaintext = SUPPORTED_LANGUAGES[0] // Plain Text
     const others = SUPPORTED_LANGUAGES.slice(1).sort((a, b) => a.label.localeCompare(b.label))
     return [plaintext, ...others]
   }
 
-  // 过滤并排序
+  // 用户输入了不同的内容，进行过滤
   const filtered = SUPPORTED_LANGUAGES.filter(lang =>
     lang.label.toLowerCase().includes(query) || lang.value.toLowerCase().includes(query)
   )

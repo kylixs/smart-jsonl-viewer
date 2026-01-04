@@ -38,8 +38,10 @@ export function generateToc(markdown: string): TocItem[] {
     const match = line.match(/^(#{1,6})\s+(.+)$/)
     if (match) {
       const level = match[1].length
-      const text = match[2].trim()
-      const id = generateHeadingId(text)
+      const rawText = match[2].trim()
+      // 清理 Markdown 格式标记，用于目录显示
+      const text = stripMarkdownFormatting(rawText)
+      const id = generateHeadingId(rawText) // ID 使用原始文本生成
 
       toc.push({ id, text, level })
     }
@@ -59,6 +61,36 @@ function generateHeadingId(text: string): string {
     .replace(/-+/g, '-') // 多个连字符合并为一个
     .replace(/^-|-$/g, '') // 移除首尾连字符
     || 'heading'
+}
+
+/**
+ * 清理标题文本中的 Markdown 格式标记
+ * 用于目录显示，去除粗体、斜体、代码等格式
+ */
+function stripMarkdownFormatting(text: string): string {
+  let cleaned = text
+
+  // 移除图片 ![alt](url)
+  cleaned = cleaned.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+
+  // 移除链接 [text](url)，保留文本
+  cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+
+  // 移除粗体 **text** 和 __text__
+  cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1')
+  cleaned = cleaned.replace(/__([^_]+)__/g, '$1')
+
+  // 移除斜体 *text* 和 _text_
+  cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1')
+  cleaned = cleaned.replace(/_([^_]+)_/g, '$1')
+
+  // 移除删除线 ~~text~~
+  cleaned = cleaned.replace(/~~([^~]+)~~/g, '$1')
+
+  // 移除行内代码 `code`
+  cleaned = cleaned.replace(/`([^`]+)`/g, '$1')
+
+  return cleaned.trim()
 }
 
 /**

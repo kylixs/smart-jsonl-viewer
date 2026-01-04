@@ -66,6 +66,15 @@
             >
               Markdown 预览
             </button>
+            <!-- 显示目录链接 -->
+            <button
+              v-if="modalViewMode === 'markdown' && shouldShowToc && !showToc"
+              class="toc-toggle-link"
+              @click="showToc = true"
+              title="显示目录"
+            >
+              显示目录
+            </button>
           </div>
 
           <button class="modal-close" @click="showModal = false">✕</button>
@@ -138,16 +147,6 @@
                   </a>
                 </nav>
               </aside>
-
-              <!-- 显示目录按钮（当目录隐藏时） -->
-              <button
-                v-if="shouldShowToc && !showToc"
-                class="toc-show-btn"
-                @click="showToc = true"
-                title="显示目录"
-              >
-                📑
-              </button>
 
               <!-- Markdown 内容 -->
               <div class="markdown-preview" :class="{ 'with-toc': shouldShowToc && showToc }" v-html="markdownHtml"></div>
@@ -757,6 +756,34 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
+/* 目录切换链接 */
+.toc-toggle-link {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #2472c8;
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+  margin-left: 8px;
+}
+
+.toc-toggle-link:hover {
+  color: #1a5fb4;
+  text-decoration: underline;
+}
+
+/* 目录切换链接暗色主题 */
+:root.dark .toc-toggle-link {
+  color: #569cd6;
+}
+
+:root.dark .toc-toggle-link:hover {
+  color: #4fc3f7;
+}
+
 .modal-body {
   flex: 1;
   overflow: auto;
@@ -1016,35 +1043,6 @@ onUnmounted(() => {
 .toc-link.toc-level-6 {
   padding-left: 48px;
   font-size: 11px;
-}
-
-/* 显示目录按钮 - 紧凑图标样式 */
-.toc-show-btn {
-  position: fixed;
-  left: 24px;
-  top: 24px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  background: #2472c8;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.toc-show-btn:hover {
-  background: #1a5fb4;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Markdown 预览样式 */
@@ -1364,14 +1362,6 @@ onUnmounted(() => {
 :root.dark .toc-link:hover {
   background: #333;
   color: #ddd;
-}
-
-:root.dark .toc-show-btn {
-  background: #569cd6;
-}
-
-:root.dark .toc-show-btn:hover {
-  background: #4a8ec2;
 }
 
 /* Markdown 预览暗色主题 */

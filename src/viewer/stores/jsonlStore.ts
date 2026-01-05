@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { JsonLineNode, FilterMode, SearchMode } from '../utils/types'
 import { parseText } from '../utils/parser'
 import { filterJsonLines } from '../utils/filter'
+import { addSearchHistory } from '../utils/searchHistory'
 
 interface JsonlState {
   // 原始数据
@@ -257,6 +258,17 @@ export const useJsonlStore = defineStore('jsonl', {
       this.filteredLines = []
       this.searchKeyword = ''
       this.fileType = null
+    },
+
+    /**
+     * 确认并保存当前搜索到历史记录
+     * 当用户有实际使用搜索结果的行为时调用
+     */
+    confirmAndSaveSearch() {
+      const keyword = this.searchKeyword.trim()
+      if (keyword) {
+        addSearchHistory(this.searchMode, keyword)
+      }
     }
   }
 })

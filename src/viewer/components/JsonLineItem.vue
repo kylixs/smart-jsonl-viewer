@@ -59,6 +59,8 @@ const linePreview = computed(() => {
 
 function toggleExpand() {
   store.toggleLineExpand(props.line.id)
+  // 用户展开/折叠表示正在查看结果，触发保存搜索历史
+  store.confirmAndSaveSearch()
 }
 
 async function copyLine() {

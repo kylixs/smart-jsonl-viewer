@@ -375,6 +375,9 @@ watch(showModal, (isOpen) => {
   if (isOpen) {
     showToc.value = true
 
+    // 用户打开解码内容弹窗表示正在查看结果，触发保存搜索历史
+    store.confirmAndSaveSearch()
+
     // 自动选择合适的视图模式
     // 优先判断代码（特别是有 shebang 的脚本），因为代码特征更明确
     if (isCodeContent.value) {

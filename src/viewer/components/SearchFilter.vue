@@ -160,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import type { FilterMode, SearchMode } from '../utils/types'
 import { useJsonlStore } from '../stores/jsonlStore'
 import {
@@ -181,6 +181,11 @@ const selectedMaxLines = ref(10)
 const showHistoryDropdown = ref(false)
 const selectedHistoryIndex = ref(-1)
 
+// 智能保存搜索历史相关
+const pendingSearchKeyword = ref('') // 待保存的搜索词
+const searchSaveTimer = ref<number>() // 3秒定时器
+const initialScrollTop = ref(0) // 记录搜索时的滚动位置
+
 // 根据当前搜索模式获取历史记录
 const searchHistory = computed(() => {
   return getSearchHistory(searchMode.value)
@@ -194,6 +199,15 @@ onMounted(() => {
   searchDecoded.value = store.searchDecoded
   selectedDepth.value = store.expandDepth
   selectedMaxLines.value = store.maxDisplayLines
+
+  // 监听页面滚动事件
+  setupScrollListener()
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  clearSearchSaveTimer()
+  cleanupScrollListener()
 })
 
 // 监听搜索模式变化，重置历史下拉状态
@@ -201,14 +215,87 @@ watch(searchMode, () => {
   selectedHistoryIndex.value = -1
 })
 
+// 设置滚动监听
+function setupScrollListener() {
+  const resultContainer = document.querySelector('.json-viewer')
+  if (resultContainer) {
+    resultContainer.addEventListener('scroll', handleScroll)
+  }
+}
+
+// 清理滚动监听
+function cleanupScrollListener() {
+  const resultContainer = document.querySelector('.json-viewer')
+  if (resultContainer) {
+    resultContainer.removeEventListener('scroll', handleScroll)
+  }
+}
+
+// 处理滚动事件
+function handleScroll(event: Event) {
+  if (!pendingSearchKeyword.value) return
+
+  const target = event.target as HTMLElement
+  const scrolled = Math.abs(target.scrollTop - initialScrollTop.value)
+  const lineHeight = 24 // 假设每行约 24px
+
+  // 滚动超过 10 行，认为用户在查看结果
+  if (scrolled > lineHeight * 10) {
+    savePendingSearch()
+  }
+}
+
+// 保存待保存的搜索
+function savePendingSearch() {
+  if (pendingSearchKeyword.value) {
+    addSearchHistory(searchMode.value, pendingSearchKeyword.value)
+    pendingSearchKeyword.value = ''
+    clearSearchSaveTimer()
+  }
+}
+
+// 清除定时器
+function clearSearchSaveTimer() {
+  if (searchSaveTimer.value) {
+    clearTimeout(searchSaveTimer.value)
+    searchSaveTimer.value = undefined
+  }
+}
+
 function handleSearch() {
   const trimmedKeyword = keyword.value.trim()
   store.setSearchKeyword(trimmedKeyword)
-  // 注意：不在这里保存历史，避免输入时产生大量中间状态
-  // 只在明确执行搜索时保存（Enter 键或点击历史项）
+
+  // 设置待保存的搜索词
+  if (trimmedKeyword && trimmedKeyword !== pendingSearchKeyword.value) {
+    pendingSearchKeyword.value = trimmedKeyword
+
+    // 记录当前滚动位置
+    const resultContainer = document.querySelector('.json-viewer')
+    if (resultContainer) {
+      initialScrollTop.value = resultContainer.scrollTop
+    }
+
+    // 清除之前的定时器
+    clearSearchSaveTimer()
+
+    // 3秒后自动保存
+    searchSaveTimer.value = window.setTimeout(() => {
+      savePendingSearch()
+    }, 3000)
+  } else if (!trimmedKeyword) {
+    // 清空搜索时，取消待保存状态
+    pendingSearchKeyword.value = ''
+    clearSearchSaveTimer()
+  }
 }
 
 function handleInputBlur() {
+  // 失去焦点时，如果有待保存的搜索，保存它
+  if (pendingSearchKeyword.value) {
+    savePendingSearch()
+  }
+
   // 延迟关闭，以便点击事件能够触发
   setTimeout(() => {
     showHistoryDropdown.value = false
@@ -247,16 +334,11 @@ function navigateHistory(direction: number) {
 
 function selectCurrentHistory() {
   if (selectedHistoryIndex.value >= 0 && selectedHistoryIndex.value < searchHistory.value.length) {
-    // 选择了历史项
+    // 选择了历史项，直接使用不需要再保存
     selectHistory(searchHistory.value[selectedHistoryIndex.value])
   } else {
-    // 按 Enter 执行搜索，此时保存到历史
-    const trimmedKeyword = keyword.value.trim()
-    if (trimmedKeyword) {
-      addSearchHistory(searchMode.value, trimmedKeyword)
-      showHistoryDropdown.value = false
-    }
-    handleSearch()
+    // 按 Enter，触发待保存逻辑（通过 handleSearch 已经设置）
+    // 不需要额外操作，handleSearch 已经处理了
   }
 }
 
@@ -292,9 +374,8 @@ function handleMaxLinesChange() {
 
 function fillExample(example: string) {
   keyword.value = example
-  store.setSearchKeyword(example)
-  // 点击示例也是明确的搜索行为，保存到历史
-  addSearchHistory(searchMode.value, example)
+  // 点击示例会触发 @input 事件，进而调用 handleSearch
+  // handleSearch 会设置待保存状态
 }
 </script>
 

@@ -144,8 +144,9 @@
               </div>
 
               <!-- 代码高亮显示或普通文本显示 -->
-              <pre v-if="isCodeContent" class="code-highlight" v-html="highlightedCode"></pre>
-              <pre v-else class="modal-text"><AnsiText :text="decodedValue" /></pre>
+              <div v-if="isCodeContent && !highlightedCode" class="code-loading">正在加载代码高亮...</div>
+              <pre v-if="isCodeContent && highlightedCode" class="code-highlight" v-html="highlightedCode"></pre>
+              <pre v-if="!isCodeContent" class="modal-text"><AnsiText :text="decodedValue" /></pre>
             </div>
 
             <!-- Markdown 预览视图 -->
@@ -411,13 +412,22 @@ async function updateHighlightedCode() {
     return
   }
 
+  console.log('[StringDecoder] 开始代码高亮', {
+    language: selectedLanguage.value,
+    isDark: store.isDark,
+    shikiInitialized: shikiInitialized.value
+  })
+
   // 确保 Shiki 已初始化
   if (!shikiInitialized.value) {
+    console.log('[StringDecoder] 初始化 Shiki')
     await initTheme()
   }
 
   try {
+    console.log('[StringDecoder] 调用 highlightCode')
     const html = await highlightCode(decodedValue.value, selectedLanguage.value, store.isDark)
+    console.log('[StringDecoder] 高亮完成，HTML长度:', html.length)
     highlightedCode.value = html
   } catch (err) {
     console.error('Failed to highlight code:', err)
@@ -1115,6 +1125,18 @@ onUnmounted(() => {
   word-break: break-word;
   margin: 0;
   color: #ce9178;
+}
+
+/* 代码加载提示 */
+.code-loading {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+:root.dark .code-loading {
+  color: #999;
 }
 
 /* 代码高亮样式 - Shiki 生成的 pre 标签 */

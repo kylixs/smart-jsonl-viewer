@@ -412,22 +412,13 @@ async function updateHighlightedCode() {
     return
   }
 
-  console.log('[StringDecoder] 开始代码高亮', {
-    language: selectedLanguage.value,
-    isDark: store.isDark,
-    shikiInitialized: shikiInitialized.value
-  })
-
   // 确保 Shiki 已初始化
   if (!shikiInitialized.value) {
-    console.log('[StringDecoder] 初始化 Shiki')
     await initTheme()
   }
 
   try {
-    console.log('[StringDecoder] 调用 highlightCode')
     const html = await highlightCode(decodedValue.value, selectedLanguage.value, store.isDark)
-    console.log('[StringDecoder] 高亮完成，HTML长度:', html.length)
     highlightedCode.value = html
   } catch (err) {
     console.error('Failed to highlight code:', err)

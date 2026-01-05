@@ -20,16 +20,34 @@ export const codeThemes: CodeTheme[] = [
     darkTheme: 'github-dark'
   },
   {
+    id: 'github-default',
+    name: 'GitHub (默认)',
+    lightTheme: 'github-light-default',
+    darkTheme: 'github-dark-default'
+  },
+  {
     id: 'github-dimmed',
     name: 'GitHub Dimmed',
     lightTheme: 'github-light',
     darkTheme: 'github-dark-dimmed'
   },
   {
+    id: 'vscode',
+    name: 'VS Code',
+    lightTheme: 'light-plus',
+    darkTheme: 'dark-plus'
+  },
+  {
     id: 'one-dark-pro',
     name: 'One Dark Pro',
     lightTheme: 'one-light',
     darkTheme: 'one-dark-pro'
+  },
+  {
+    id: 'solarized',
+    name: 'Solarized',
+    lightTheme: 'solarized-light',
+    darkTheme: 'solarized-dark'
   },
   {
     id: 'vitesse',
@@ -66,6 +84,12 @@ export const codeThemes: CodeTheme[] = [
     name: 'Tokyo Night',
     lightTheme: 'tokyo-night',
     darkTheme: 'tokyo-night'
+  },
+  {
+    id: 'night-owl',
+    name: 'Night Owl',
+    lightTheme: 'night-owl',
+    darkTheme: 'night-owl'
   }
 ]
 

@@ -120,6 +120,13 @@
                     </div>
                   </div>
                 </div>
+                <button
+                  class="auto-detect-btn"
+                  @click="autoDetectLanguage"
+                  title="自动检测编程语言"
+                >
+                  自动检测
+                </button>
               </div>
 
               <!-- 代码高亮显示或普通文本显示 -->
@@ -435,6 +442,17 @@ function handleLanguageSelectorBlur() {
     // 恢复显示当前选择的语言名称
     languageSearchQuery.value = selectedLanguageLabel.value
   }, 200)
+}
+
+// 自动检测编程语言
+function autoDetectLanguage() {
+  const detectedLang = detectLanguage(decodedValue.value)
+  selectedLanguage.value = detectedLang
+  const lang = SUPPORTED_LANGUAGES.find(l => l.value === detectedLang)
+  if (lang) {
+    languageSearchQuery.value = lang.label
+  }
+  showLanguageDropdown.value = false
 }
 
 function toggleMode() {
@@ -819,6 +837,31 @@ onUnmounted(() => {
   font-weight: 500;
   color: #333;
   flex-shrink: 0;
+}
+
+/* 自动检测按钮 */
+.auto-detect-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  background: #2472c8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.auto-detect-btn:hover {
+  background: #1a5fb4;
+  box-shadow: 0 2px 6px rgba(36, 114, 200, 0.3);
+}
+
+.auto-detect-btn:active {
+  background: #165a9e;
+  transform: translateY(1px);
 }
 
 /* 语言选择器容器 */
@@ -1284,6 +1327,20 @@ onUnmounted(() => {
 
 :root.dark .code-toolbar-label {
   color: #ddd;
+}
+
+/* 自动检测按钮暗色主题 */
+:root.dark .auto-detect-btn {
+  background: #569cd6;
+}
+
+:root.dark .auto-detect-btn:hover {
+  background: #4a8ec2;
+  box-shadow: 0 2px 6px rgba(86, 156, 214, 0.4);
+}
+
+:root.dark .auto-detect-btn:active {
+  background: #3d7ab3;
 }
 
 /* 语言选择器暗色主题 */

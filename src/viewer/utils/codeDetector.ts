@@ -128,8 +128,16 @@ export function detectLanguage(text: string): LanguageType {
     return 'javascript'
   }
 
-  // 检测 Java
-  if (/^\s*(public|private|protected)\s+(class|interface|enum)\s/m.test(text)) {
+  // 检测 Java（在 Go 之前检测，因为两者都用 package 关键字）
+  // Java 的 package 通常有点号，如 package com.example.app;
+  // Java 特征：package 声明、import 语句、注解、class/interface/enum
+  if (
+    /^package\s+[\w.]+;/m.test(text) || // Java package 有点号和分号
+    /^import\s+(static\s+)?[\w.]+(\.\*)?;/m.test(text) || // Java import 格式
+    /^\s*@\w+(\(.*\))?$/m.test(text) || // Java 注解
+    /^\s*(public|private|protected)?\s*(static\s+)?(final\s+)?(class|interface|enum|abstract\s+class)\s+\w+/m.test(text) || // class/interface/enum 定义
+    /\b(extends|implements)\s+\w+/m.test(text) // Java 继承/实现
+  ) {
     return 'java'
   }
 
@@ -143,8 +151,8 @@ export function detectLanguage(text: string): LanguageType {
     return 'csharp'
   }
 
-  // 检测 Go
-  if (/^package\s+\w+|func\s+\w+\s*\(/m.test(text)) {
+  // 检测 Go（在 Java 之后，避免误判）
+  if (/^package\s+\w+\s*$/m.test(text) || /func\s+\w+\s*\(/m.test(text)) {
     return 'go'
   }
 

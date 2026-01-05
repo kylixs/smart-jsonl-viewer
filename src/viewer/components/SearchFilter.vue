@@ -8,10 +8,36 @@
         class="search-input"
         placeholder="输入关键字搜索..."
         @input="handleSearch"
+        @focus="showHistoryDropdown = true"
+        @blur="handleInputBlur"
+        @keydown.down.prevent="navigateHistory(1)"
+        @keydown.up.prevent="navigateHistory(-1)"
+        @keydown.enter="selectCurrentHistory"
       />
       <button v-if="keyword" class="clear-btn" @click="clearSearch" title="清空">
         ✕
       </button>
+      <!-- 搜索历史下拉列表 -->
+      <div v-if="showHistoryDropdown && searchHistory.length > 0" class="history-dropdown">
+        <div class="history-header">
+          <span class="history-title">搜索历史</span>
+          <button class="history-clear-all" @mousedown.prevent="clearAllHistory" title="清空历史">
+            清空
+          </button>
+        </div>
+        <div
+          v-for="(item, index) in searchHistory"
+          :key="index"
+          class="history-item"
+          :class="{ active: index === selectedHistoryIndex }"
+          @mousedown.prevent="selectHistory(item)"
+        >
+          <span class="history-text">{{ item }}</span>
+          <button class="history-delete" @mousedown.prevent.stop="deleteHistoryItem(item)" title="删除">
+            ✕
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="filter-options">
@@ -126,9 +152,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import type { FilterMode, SearchMode } from '../utils/types'
 import { useJsonlStore } from '../stores/jsonlStore'
+import {
+  getSearchHistory,
+  addSearchHistory,
+  clearSearchHistory,
+  removeSearchHistoryItem
+} from '../utils/searchHistory'
 
 const store = useJsonlStore()
 
@@ -138,6 +170,13 @@ const searchMode = ref<SearchMode>('fuzzy')
 const searchDecoded = ref(true)
 const selectedDepth = ref(-1)
 const selectedMaxLines = ref(10)
+const showHistoryDropdown = ref(false)
+const selectedHistoryIndex = ref(-1)
+
+// 根据当前搜索模式获取历史记录
+const searchHistory = computed(() => {
+  return getSearchHistory(searchMode.value)
+})
 
 onMounted(() => {
   // 从 store 初始化
@@ -149,9 +188,66 @@ onMounted(() => {
   selectedMaxLines.value = store.maxDisplayLines
 })
 
+// 监听搜索模式变化，重置历史下拉状态
+watch(searchMode, () => {
+  selectedHistoryIndex.value = -1
+})
+
 function handleSearch() {
-  store.setSearchKeyword(keyword.value)
+  const trimmedKeyword = keyword.value.trim()
+  store.setSearchKeyword(trimmedKeyword)
+
+  // 保存到历史记录（只有非空时）
+  if (trimmedKeyword) {
+    addSearchHistory(searchMode.value, trimmedKeyword)
+    showHistoryDropdown.value = false
+  }
 }
+
+function handleInputBlur() {
+  // 延迟关闭，以便点击事件能够触发
+  setTimeout(() => {
+    showHistoryDropdown.value = false
+    selectedHistoryIndex.value = -1
+  }, 200)
+}
+
+function selectHistory(item: string) {
+  keyword.value = item
+  store.setSearchKeyword(item)
+  showHistoryDropdown.value = false
+  selectedHistoryIndex.value = -1
+}
+
+function deleteHistoryItem(item: string) {
+  removeSearchHistoryItem(searchMode.value, item)
+  // 强制刷新历史列表
+  selectedHistoryIndex.value = -1
+}
+
+function clearAllHistory() {
+  clearSearchHistory(searchMode.value)
+  showHistoryDropdown.value = false
+  selectedHistoryIndex.value = -1
+}
+
+function navigateHistory(direction: number) {
+  if (searchHistory.value.length === 0) return
+
+  const newIndex = selectedHistoryIndex.value + direction
+  if (newIndex >= -1 && newIndex < searchHistory.value.length) {
+    selectedHistoryIndex.value = newIndex
+  }
+}
+
+function selectCurrentHistory() {
+  if (selectedHistoryIndex.value >= 0 && selectedHistoryIndex.value < searchHistory.value.length) {
+    selectHistory(searchHistory.value[selectedHistoryIndex.value])
+  } else {
+    handleSearch()
+  }
+}
+
 
 function handleModeChange() {
   store.setFilterMode(mode.value)
@@ -236,6 +332,99 @@ function fillExample(example: string) {
 
 .clear-btn:hover {
   color: #666;
+}
+
+/* 搜索历史下拉列表 */
+.history-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9f9f9;
+  border-radius: 6px 6px 0 0;
+}
+
+.history-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.history-clear-all {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.history-clear-all:hover {
+  background: #e0e0e0;
+  color: #666;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item:hover,
+.history-item.active {
+  background: #f5f5f5;
+}
+
+.history-text {
+  flex: 1;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-delete {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #ccc;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+  transition: color 0.2s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.history-delete:hover {
+  color: #f44336;
 }
 
 .filter-options {
@@ -397,6 +586,52 @@ function fillExample(example: string) {
 
 :root.dark .clear-btn:hover {
   color: #999;
+}
+
+/* 搜索历史下拉列表暗色主题 */
+:root.dark .history-dropdown {
+  background: #2a2a2a;
+  border-color: #444;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+:root.dark .history-header {
+  background: #1e1e1e;
+  border-bottom-color: #444;
+}
+
+:root.dark .history-title {
+  color: #999;
+}
+
+:root.dark .history-clear-all {
+  color: #666;
+}
+
+:root.dark .history-clear-all:hover {
+  background: #333;
+  color: #999;
+}
+
+:root.dark .history-item {
+  border-bottom-color: #333;
+}
+
+:root.dark .history-item:hover,
+:root.dark .history-item.active {
+  background: #333;
+}
+
+:root.dark .history-text {
+  color: #ddd;
+}
+
+:root.dark .history-delete {
+  color: #555;
+}
+
+:root.dark .history-delete:hover {
+  color: #ff6b6b;
 }
 
 :root.dark .radio-label,

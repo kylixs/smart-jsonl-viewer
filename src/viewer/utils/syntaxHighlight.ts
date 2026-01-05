@@ -104,3 +104,63 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
 }
+
+/**
+ * 使用 highlight.js 自动检测编程语言
+ * @param code 代码文本
+ * @returns 检测到的语言类型，如果无法识别则返回 'plaintext'
+ */
+export function autoDetectLanguage(code: string): LanguageType {
+  if (!code || typeof code !== 'string') {
+    return 'plaintext'
+  }
+
+  try {
+    // 使用 highlight.js 的自动检测功能
+    const result = hljs.highlightAuto(code)
+    const detectedLang = result.language
+
+    if (!detectedLang) {
+      return 'plaintext'
+    }
+
+    // 将 highlight.js 的语言名称映射回我们的 LanguageType
+    const reverseMap: Record<string, LanguageType> = {
+      'javascript': 'javascript',
+      'typescript': 'typescript',
+      'python': 'python',
+      'bash': 'bash',
+      'shell': 'bash',
+      'sh': 'bash',
+      'json': 'json',
+      'yaml': 'yaml',
+      'yml': 'yaml',
+      'xml': 'xml',
+      'html': 'html',
+      'css': 'css',
+      'sql': 'sql',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c++': 'cpp',
+      'c': 'cpp',
+      'csharp': 'csharp',
+      'cs': 'csharp',
+      'go': 'go',
+      'golang': 'go',
+      'rust': 'rust',
+      'php': 'php',
+      'ruby': 'ruby',
+      'swift': 'swift',
+      'kotlin': 'kotlin',
+      'markdown': 'markdown',
+      'md': 'markdown',
+      'plaintext': 'plaintext',
+      'text': 'plaintext',
+    }
+
+    return reverseMap[detectedLang.toLowerCase()] || 'plaintext'
+  } catch (err) {
+    console.error('Language auto-detection error:', err)
+    return 'plaintext'
+  }
+}

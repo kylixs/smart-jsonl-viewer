@@ -1,7 +1,9 @@
 /**
  * Markdown 检测和渲染工具
- * 轻量级实现，无需额外依赖
+ * 使用 markdown-it 作为核心渲染器，支持 Mermaid 图表
  */
+
+import MarkdownIt from 'markdown-it'
 
 /**
  * 标题项接口
@@ -13,37 +15,69 @@ export interface TocItem {
 }
 
 /**
+ * 创建 markdown-it 实例
+ */
+const md = new MarkdownIt({
+  html: true, // 允许HTML标签
+  linkify: true, // 自动转换URL为链接
+  typographer: true, // 启用智能引号和其他排版替换
+  breaks: false, // 不将单个换行符转换为<br>（符合标准Markdown）
+})
+
+// 自定义渲染规则：为标题添加ID
+md.renderer.rules.heading_open = (tokens, idx) => {
+  const token = tokens[idx]
+  const nextToken = tokens[idx + 1]
+
+  if (nextToken && nextToken.type === 'inline') {
+    const text = nextToken.content
+    const id = generateHeadingId(text)
+    const level = token.markup.length
+    return `<h${level} id="${id}">`
+  }
+
+  const level = token.markup.length
+  return `<h${level}>`
+}
+
+// 自定义代码块渲染：标记 Mermaid 代码块
+const defaultFence = md.renderer.rules.fence!
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx]
+  const lang = token.info.trim()
+
+  // 如果是 mermaid 代码块，添加特殊标记
+  if (lang === 'mermaid') {
+    return `<pre class="mermaid">${token.content}</pre>`
+  }
+
+  // 其他代码块使用默认渲染
+  return defaultFence(tokens, idx, options, env, self)
+}
+
+/**
  * 生成目录结构
  */
 export function generateToc(markdown: string): TocItem[] {
   if (!markdown) return []
 
   const toc: TocItem[] = []
-  const lines = markdown.split('\n')
-  let inCodeBlock = false
+  const tokens = md.parse(markdown, {})
 
-  for (const line of lines) {
-    // 检测代码块的开始和结束（``` 或 ~~~）
-    if (line.trim().match(/^```|^~~~/)) {
-      inCodeBlock = !inCodeBlock
-      continue
-    }
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
 
-    // 跳过代码块内的内容
-    if (inCodeBlock) {
-      continue
-    }
+    if (token.type === 'heading_open') {
+      const level = parseInt(token.tag.substring(1)) // h1 -> 1, h2 -> 2, etc.
+      const nextToken = tokens[i + 1]
 
-    // 解析标题
-    const match = line.match(/^(#{1,6})\s+(.+)$/)
-    if (match) {
-      const level = match[1].length
-      const rawText = match[2].trim()
-      // 清理 Markdown 格式标记，用于目录显示
-      const text = stripMarkdownFormatting(rawText)
-      const id = generateHeadingId(rawText) // ID 使用原始文本生成
+      if (nextToken && nextToken.type === 'inline') {
+        const rawText = nextToken.content
+        const text = stripMarkdownFormatting(rawText)
+        const id = generateHeadingId(rawText)
 
-      toc.push({ id, text, level })
+        toc.push({ id, text, level })
+      }
     }
   }
 
@@ -137,161 +171,16 @@ export function isMarkdown(text: string): boolean {
 }
 
 /**
- * 简单的 Markdown 渲染器
- * 支持常见的 Markdown 语法
+ * 使用 markdown-it 渲染 Markdown
+ * 支持 Mermaid 图表（需要配合前端 mermaid 库渲染）
  */
 export function renderMarkdown(markdown: string): string {
   if (!markdown) return ''
 
-  let html = markdown
-
-  // 转义 HTML 特殊字符（在处理其他语法之前）
-  html = html
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-  // 代码块（三个反引号）- 必须先处理，避免干扰其他语法
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang, code) => {
-    return `<pre><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`
-  })
-
-  // 行内代码
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-
-  // 标题 - 添加 ID 以支持锚点跳转
-  html = html.replace(/^######\s+(.+)$/gm, (_match, text) => {
-    const id = generateHeadingId(text)
-    return `<h6 id="${id}">${text}</h6>`
-  })
-  html = html.replace(/^#####\s+(.+)$/gm, (_match, text) => {
-    const id = generateHeadingId(text)
-    return `<h5 id="${id}">${text}</h5>`
-  })
-  html = html.replace(/^####\s+(.+)$/gm, (_match, text) => {
-    const id = generateHeadingId(text)
-    return `<h4 id="${id}">${text}</h4>`
-  })
-  html = html.replace(/^###\s+(.+)$/gm, (_match, text) => {
-    const id = generateHeadingId(text)
-    return `<h3 id="${id}">${text}</h3>`
-  })
-  html = html.replace(/^##\s+(.+)$/gm, (_match, text) => {
-    const id = generateHeadingId(text)
-    return `<h2 id="${id}">${text}</h2>`
-  })
-  html = html.replace(/^#\s+(.+)$/gm, (_match, text) => {
-    const id = generateHeadingId(text)
-    return `<h1 id="${id}">${text}</h1>`
-  })
-
-  // 分隔线
-  html = html.replace(/^\s*[-*_]{3,}\s*$/gm, '<hr>')
-
-  // 图片（必须在链接之前处理）
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
-
-  // 链接
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-
-  // 加粗
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
-
-  // 斜体
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  html = html.replace(/_([^_]+)_/g, '<em>$1</em>')
-
-  // 删除线
-  html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
-
-  // 引用块
-  html = html.replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>')
-
-  // 无序列表
-  const ulRegex = /^(\s*[-*+]\s+.+\n?)+/gm
-  html = html.replace(ulRegex, (match) => {
-    const items = match
-      .trim()
-      .split('\n')
-      .map((line) => {
-        const content = line.replace(/^\s*[-*+]\s+/, '')
-        return `<li>${content}</li>`
-      })
-      .join('\n')
-    return `<ul>\n${items}\n</ul>`
-  })
-
-  // 有序列表
-  const olRegex = /^(\s*\d+\.\s+.+\n?)+/gm
-  html = html.replace(olRegex, (match) => {
-    const items = match
-      .trim()
-      .split('\n')
-      .map((line) => {
-        const content = line.replace(/^\s*\d+\.\s+/, '')
-        return `<li>${content}</li>`
-      })
-      .join('\n')
-    return `<ol>\n${items}\n</ol>`
-  })
-
-  // 表格
-  const tableRegex = /^\|(.+)\|\n\|[\s:|-]+\|\n((?:\|.+\|\n?)+)/gm
-  html = html.replace(tableRegex, (_match, header, rows) => {
-    const headerCells = header
-      .split('|')
-      .filter((cell: string) => cell.trim())
-      .map((cell: string) => `<th>${cell.trim()}</th>`)
-      .join('')
-
-    const rowsHtml = rows
-      .trim()
-      .split('\n')
-      .map((row: string) => {
-        const cells = row
-          .split('|')
-          .filter((cell: string) => cell.trim())
-          .map((cell: string) => `<td>${cell.trim()}</td>`)
-          .join('')
-        return `<tr>${cells}</tr>`
-      })
-      .join('\n')
-
-    return `<table>
-<thead><tr>${headerCells}</tr></thead>
-<tbody>
-${rowsHtml}
-</tbody>
-</table>`
-  })
-
-  // 处理行尾硬换行（Markdown 标准：行尾两个空格 + 换行）
-  html = html.replace(/  \n/g, '<br>\n')
-
-  // 段落 - 将双换行符转换为段落
-  html = html.replace(/\n\n+/g, '</p><p>')
-  html = `<p>${html}</p>`
-
-  // 清理空段落
-  html = html.replace(/<p>\s*<\/p>/g, '')
-  html = html.replace(/<p>\s*(<h[1-6]>)/g, '$1')
-  html = html.replace(/(<\/h[1-6]>)\s*<\/p>/g, '$1')
-  html = html.replace(/<p>\s*(<hr>)/g, '$1')
-  html = html.replace(/(<hr>)\s*<\/p>/g, '$1')
-  html = html.replace(/<p>\s*(<ul>)/g, '$1')
-  html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1')
-  html = html.replace(/<p>\s*(<ol>)/g, '$1')
-  html = html.replace(/(<\/ol>)\s*<\/p>/g, '$1')
-  html = html.replace(/<p>\s*(<blockquote>)/g, '$1')
-  html = html.replace(/(<\/blockquote>)\s*<\/p>/g, '$1')
-  html = html.replace(/<p>\s*(<pre>)/g, '$1')
-  html = html.replace(/(<\/pre>)\s*<\/p>/g, '$1')
-  html = html.replace(/<p>\s*(<table>)/g, '$1')
-  html = html.replace(/(<\/table>)\s*<\/p>/g, '$1')
-
-  // 单换行符转换为空格（符合 Markdown 标准）
-  html = html.replace(/\n/g, ' ')
-
-  return html
+  try {
+    return md.render(markdown)
+  } catch (err) {
+    console.error('Markdown rendering error:', err)
+    return `<p>Markdown 渲染错误: ${(err as Error).message}</p>`
+  }
 }

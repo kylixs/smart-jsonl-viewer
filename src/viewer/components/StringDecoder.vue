@@ -166,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import JsonTree from './JsonTree.vue'
 import AnsiText from './AnsiText.vue'
 import { smartDecode, isDecodable as checkDecodable } from '../utils/decoder'
@@ -176,10 +176,19 @@ import { copyToClipboard } from '../utils/clipboard'
 import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
 import { isCode, detectLanguage, SUPPORTED_LANGUAGES, type LanguageType } from '../utils/codeDetector'
 import { highlightCode } from '../utils/syntaxHighlight'
+import mermaid from 'mermaid'
 
 // 导入 highlight.js 主题样式
 import 'highlight.js/styles/github.css' // 亮色主题
 import 'highlight.js/styles/github-dark.css' // 暗色主题
+
+// 初始化 mermaid
+mermaid.initialize({
+  startOnLoad: false, // 手动控制渲染时机
+  theme: 'default',
+  securityLevel: 'loose', // 允许点击等交互
+  fontFamily: 'Arial, sans-serif',
+})
 
 interface Props {
   value: any
@@ -310,6 +319,35 @@ const isCodeContent = computed(() => {
 const markdownHtml = computed(() => {
   if (!isMarkdownContent.value) return ''
   return renderMarkdown(decodedValue.value)
+})
+
+// 监听 markdownHtml 变化，渲染 Mermaid 图表
+watch(markdownHtml, async () => {
+  if (markdownHtml.value && showModal.value) {
+    await nextTick()
+    try {
+      // 查找所有 mermaid 代码块并渲染
+      await mermaid.run({
+        querySelector: '.markdown-preview .mermaid',
+      })
+    } catch (err) {
+      console.error('Mermaid rendering error:', err)
+    }
+  }
+})
+
+// 监听模态框打开，触发 mermaid 渲染
+watch(showModal, async (isOpen) => {
+  if (isOpen && markdownHtml.value) {
+    await nextTick()
+    try {
+      await mermaid.run({
+        querySelector: '.markdown-preview .mermaid',
+      })
+    } catch (err) {
+      console.error('Mermaid rendering error:', err)
+    }
+  }
 })
 
 // 渲染后的代码 HTML（语法高亮）

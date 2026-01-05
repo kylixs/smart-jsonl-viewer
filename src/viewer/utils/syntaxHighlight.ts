@@ -1,65 +1,25 @@
 /**
  * 语法高亮工具
- * 使用 highlight.js 实现
+ * 使用 Shiki 实现 - VS Code 同款高亮引擎
  */
 
-import hljs from 'highlight.js/lib/core'
-
-// 按需导入常用语言
-import javascript from 'highlight.js/lib/languages/javascript'
-import typescript from 'highlight.js/lib/languages/typescript'
-import python from 'highlight.js/lib/languages/python'
-import bash from 'highlight.js/lib/languages/bash'
-import json from 'highlight.js/lib/languages/json'
-import yaml from 'highlight.js/lib/languages/yaml'
-import xml from 'highlight.js/lib/languages/xml'
-import css from 'highlight.js/lib/languages/css'
-import sql from 'highlight.js/lib/languages/sql'
-import java from 'highlight.js/lib/languages/java'
-import cpp from 'highlight.js/lib/languages/cpp'
-import csharp from 'highlight.js/lib/languages/csharp'
-import go from 'highlight.js/lib/languages/go'
-import rust from 'highlight.js/lib/languages/rust'
-import php from 'highlight.js/lib/languages/php'
-import ruby from 'highlight.js/lib/languages/ruby'
-import swift from 'highlight.js/lib/languages/swift'
-import kotlin from 'highlight.js/lib/languages/kotlin'
-import markdown from 'highlight.js/lib/languages/markdown'
-import plaintext from 'highlight.js/lib/languages/plaintext'
-
+import { createHighlighter, type Highlighter, type BundledLanguage, type BundledTheme } from 'shiki'
 import type { LanguageType } from './codeDetector'
 
-// 注册语言
-hljs.registerLanguage('javascript', javascript)
-hljs.registerLanguage('typescript', typescript)
-hljs.registerLanguage('python', python)
-hljs.registerLanguage('bash', bash)
-hljs.registerLanguage('json', json)
-hljs.registerLanguage('yaml', yaml)
-hljs.registerLanguage('xml', xml)
-hljs.registerLanguage('css', css)
-hljs.registerLanguage('sql', sql)
-hljs.registerLanguage('java', java)
-hljs.registerLanguage('cpp', cpp)
-hljs.registerLanguage('csharp', csharp)
-hljs.registerLanguage('go', go)
-hljs.registerLanguage('rust', rust)
-hljs.registerLanguage('php', php)
-hljs.registerLanguage('ruby', ruby)
-hljs.registerLanguage('swift', swift)
-hljs.registerLanguage('kotlin', kotlin)
-hljs.registerLanguage('markdown', markdown)
-hljs.registerLanguage('plaintext', plaintext)
+// Shiki 高亮器实例（单例）
+let highlighterInstance: Highlighter | null = null
+let currentTheme: BundledTheme = 'github-light'
+let currentDarkTheme: BundledTheme = 'github-dark'
 
-// 语言类型映射（将我们的类型映射到 highlight.js 的语言名称）
-const languageMap: Record<LanguageType, string> = {
+// 语言类型映射（将我们的类型映射到 Shiki 的语言名称）
+const languageMap: Partial<Record<LanguageType, BundledLanguage>> = {
   javascript: 'javascript',
   typescript: 'typescript',
   python: 'python',
   bash: 'bash',
   json: 'json',
   yaml: 'yaml',
-  html: 'xml',
+  html: 'html',
   css: 'css',
   sql: 'sql',
   java: 'java',
@@ -73,23 +33,86 @@ const languageMap: Record<LanguageType, string> = {
   kotlin: 'kotlin',
   xml: 'xml',
   markdown: 'markdown',
-  plaintext: 'plaintext',
 }
 
 /**
- * 根据语言类型高亮代码
+ * 初始化或获取 Shiki 高亮器实例
  */
-export function highlightCode(code: string, language: LanguageType): string {
+async function getHighlighterInstance(): Promise<Highlighter> {
+  if (!highlighterInstance) {
+    highlighterInstance = await createHighlighter({
+      themes: [
+        'github-light',
+        'github-dark',
+        'github-dark-dimmed',
+        'vitesse-light',
+        'vitesse-dark',
+        'material-theme-lighter',
+        'material-theme-darker',
+        'nord',
+        'monokai',
+        'dracula'
+      ],
+      langs: [
+        'javascript',
+        'typescript',
+        'python',
+        'bash',
+        'json',
+        'yaml',
+        'html',
+        'css',
+        'sql',
+        'java',
+        'cpp',
+        'csharp',
+        'go',
+        'rust',
+        'php',
+        'ruby',
+        'swift',
+        'kotlin',
+        'xml',
+        'markdown'
+      ],
+    })
+  }
+  return highlighterInstance
+}
+
+/**
+ * 设置当前主题
+ */
+export function setTheme(lightTheme: BundledTheme, darkTheme: BundledTheme) {
+  currentTheme = lightTheme
+  currentDarkTheme = darkTheme
+}
+
+/**
+ * 根据语言类型高亮代码（异步）
+ */
+export async function highlightCode(
+  code: string,
+  language: LanguageType,
+  isDark: boolean = false
+): Promise<string> {
   if (!code) return ''
 
   try {
-    const hljsLanguage = languageMap[language] || 'plaintext'
-    const result = hljs.highlight(code, { language: hljsLanguage })
-    return result.value
+    const highlighter = await getHighlighterInstance()
+    const shikiLang = languageMap[language] || 'javascript'
+    const theme = isDark ? currentDarkTheme : currentTheme
+
+    const html = highlighter.codeToHtml(code, {
+      lang: shikiLang,
+      theme: theme,
+    })
+
+    return html
   } catch (err) {
-    console.error('Syntax highlighting error:', err)
+    console.error('Shiki highlighting error:', err)
     // 出错时返回转义后的纯文本
-    return escapeHtml(code)
+    return `<pre><code>${escapeHtml(code)}</code></pre>`
   }
 }
 
@@ -106,61 +129,63 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * 使用 highlight.js 自动检测编程语言
- * @param code 代码文本
- * @returns 检测到的语言类型，如果无法识别则返回 'plaintext'
+ * 自动检测编程语言
+ * Shiki 没有内置自动检测，这里提供一个简单实现
  */
 export function autoDetectLanguage(code: string): LanguageType {
   if (!code || typeof code !== 'string') {
     return 'plaintext'
   }
 
-  try {
-    // 使用 highlight.js 的自动检测功能
-    const result = hljs.highlightAuto(code)
-    const detectedLang = result.language
+  const trimmed = code.trim()
 
-    if (!detectedLang) {
-      return 'plaintext'
+  // JavaScript/TypeScript 特征
+  if (/^(import|export|const|let|var|function|class|interface|type)\s/.test(trimmed)) {
+    if (/:\s*\w+(\[\])?(\s*[=|]|;)/.test(trimmed) || /interface\s+\w+/.test(trimmed)) {
+      return 'typescript'
     }
-
-    // 将 highlight.js 的语言名称映射回我们的 LanguageType
-    const reverseMap: Record<string, LanguageType> = {
-      'javascript': 'javascript',
-      'typescript': 'typescript',
-      'python': 'python',
-      'bash': 'bash',
-      'shell': 'bash',
-      'sh': 'bash',
-      'json': 'json',
-      'yaml': 'yaml',
-      'yml': 'yaml',
-      'xml': 'xml',
-      'html': 'html',
-      'css': 'css',
-      'sql': 'sql',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c++': 'cpp',
-      'c': 'cpp',
-      'csharp': 'csharp',
-      'cs': 'csharp',
-      'go': 'go',
-      'golang': 'go',
-      'rust': 'rust',
-      'php': 'php',
-      'ruby': 'ruby',
-      'swift': 'swift',
-      'kotlin': 'kotlin',
-      'markdown': 'markdown',
-      'md': 'markdown',
-      'plaintext': 'plaintext',
-      'text': 'plaintext',
-    }
-
-    return reverseMap[detectedLang.toLowerCase()] || 'plaintext'
-  } catch (err) {
-    console.error('Language auto-detection error:', err)
-    return 'plaintext'
+    return 'javascript'
   }
+
+  // Python 特征
+  if (/^(def|class|import|from)\s/.test(trimmed) || /^\s*#\s*!\/usr\/bin\/(python|env python)/.test(trimmed)) {
+    return 'python'
+  }
+
+  // JSON 特征
+  if (/^\s*[\{\[]/.test(trimmed) && /[\}\]]\s*$/.test(trimmed)) {
+    try {
+      JSON.parse(trimmed)
+      return 'json'
+    } catch {
+      // 不是有效 JSON
+    }
+  }
+
+  // HTML/XML 特征
+  if (/^<[!?]?[a-zA-Z]/.test(trimmed) && /<\/[a-zA-Z]/.test(trimmed)) {
+    return 'html'
+  }
+
+  // Bash 特征
+  if (/^#!\/bin\/(ba)?sh/.test(trimmed) || /^\s*(echo|cd|ls|grep|awk|sed)\s/.test(trimmed)) {
+    return 'bash'
+  }
+
+  // CSS 特征
+  if (/\{[^}]*:[^}]*\}/.test(trimmed) && /[\.#][\w-]+\s*\{/.test(trimmed)) {
+    return 'css'
+  }
+
+  // SQL 特征
+  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s/i.test(trimmed)) {
+    return 'sql'
+  }
+
+  // YAML 特征
+  if (/^[\w-]+:\s/.test(trimmed) && !/[{}]/.test(trimmed)) {
+    return 'yaml'
+  }
+
+  return 'plaintext'
 }

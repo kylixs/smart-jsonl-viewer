@@ -189,11 +189,11 @@ import { useJsonlStore } from '../stores/jsonlStore'
 import { copyToClipboard } from '../utils/clipboard'
 import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
 import { isCode, detectLanguage, SUPPORTED_LANGUAGES, type LanguageType } from '../utils/codeDetector'
-import { highlightCode } from '../utils/syntaxHighlight'
+import { highlightCode, setTheme } from '../utils/syntaxHighlight'
 import mermaid from 'mermaid'
 import {
   codeThemes,
-  loadCodeTheme,
+  getCodeThemeById,
   saveCodeThemePreference,
   loadCodeThemePreference
 } from '../utils/codeThemes'
@@ -228,31 +228,32 @@ const showLanguageDropdown = ref(false)
 const availableCodeThemes = codeThemes
 const selectedCodeTheme = ref(loadCodeThemePreference())
 
-// 初始化加载主题
-onMounted(async () => {
-  try {
-    await loadCodeTheme(selectedCodeTheme.value, store.isDark)
-  } catch (err) {
-    console.error('Failed to load code theme:', err)
-  }
+// 初始化设置 Shiki 主题
+const initTheme = () => {
+  const theme = getCodeThemeById(selectedCodeTheme.value)
+  setTheme(theme.lightTheme, theme.darkTheme)
+}
+
+// 初始化主题
+onMounted(() => {
+  initTheme()
 })
 
-// 监听暗色模式变化，重新加载主题
-watch(() => store.isDark, async (isDark) => {
-  try {
-    await loadCodeTheme(selectedCodeTheme.value, isDark)
-  } catch (err) {
-    console.error('Failed to reload code theme:', err)
+// 监听暗色模式变化，触发代码重新高亮
+watch(() => store.isDark, () => {
+  if (isCodeContent.value && decodedValue.value) {
+    updateHighlightedCode()
   }
 })
 
 // 处理主题切换
-async function handleCodeThemeChange() {
+function handleCodeThemeChange() {
   saveCodeThemePreference(selectedCodeTheme.value)
-  try {
-    await loadCodeTheme(selectedCodeTheme.value, store.isDark)
-  } catch (err) {
-    console.error('Failed to change code theme:', err)
+  const theme = getCodeThemeById(selectedCodeTheme.value)
+  setTheme(theme.lightTheme, theme.darkTheme)
+  // 重新高亮代码
+  if (isCodeContent.value && decodedValue.value) {
+    updateHighlightedCode()
   }
 }
 
@@ -398,10 +399,37 @@ watch(showModal, async (isOpen) => {
   }
 })
 
-// 渲染后的代码 HTML（语法高亮）
-const highlightedCode = computed(() => {
-  if (!isCodeContent.value) return escapeHtml(decodedValue.value)
-  return highlightCode(decodedValue.value, selectedLanguage.value)
+// 渲染后的代码 HTML（语法高亮）- 使用 ref 因为 Shiki 是异步的
+const highlightedCode = ref('')
+
+// 异步更新代码高亮
+async function updateHighlightedCode() {
+  if (!isCodeContent.value) {
+    highlightedCode.value = `<pre><code>${escapeHtml(decodedValue.value)}</code></pre>`
+    return
+  }
+
+  try {
+    const html = await highlightCode(decodedValue.value, selectedLanguage.value, store.isDark)
+    highlightedCode.value = html
+  } catch (err) {
+    console.error('Failed to highlight code:', err)
+    highlightedCode.value = `<pre><code>${escapeHtml(decodedValue.value)}</code></pre>`
+  }
+}
+
+// 监听语言变化，重新高亮
+watch(selectedLanguage, () => {
+  if (isCodeContent.value && decodedValue.value) {
+    updateHighlightedCode()
+  }
+})
+
+// 监听代码内容变化，触发高亮
+watch([isCodeContent, decodedValue], () => {
+  if (isCodeContent.value && decodedValue.value) {
+    updateHighlightedCode()
+  }
 })
 
 // 辅助函数：转义 HTML
@@ -1084,18 +1112,28 @@ onUnmounted(() => {
   color: #ce9178;
 }
 
-/* 代码高亮样式 */
+/* 代码高亮样式 - Shiki 生成的 pre 标签 */
 .code-highlight {
+  margin: 0;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.code-highlight pre {
+  margin: 0;
+  padding: 16px;
   font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  padding: 16px;
-  border-radius: 6px;
   overflow-x: auto;
-  margin: 0;
 }
 
-/* 暗色主题下的代码高亮容器样式由主题CSS控制 */
+.code-highlight code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Shiki 主题样式是内联的，不需要额外的 CSS */
 
 /* Markdown 容器 - 支持侧边目录布局 */
 .markdown-container {

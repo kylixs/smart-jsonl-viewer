@@ -1,32 +1,47 @@
 /**
  * 代码高亮主题管理
+ * Shiki 主题配置
  */
+
+import type { BundledTheme } from 'shiki'
 
 export interface CodeTheme {
   id: string
   name: string
-  lightTheme: string // highlight.js 主题名称
-  darkTheme: string
+  lightTheme: BundledTheme
+  darkTheme: BundledTheme
 }
 
 export const codeThemes: CodeTheme[] = [
   {
     id: 'github',
     name: 'GitHub',
-    lightTheme: 'github',
+    lightTheme: 'github-light',
     darkTheme: 'github-dark'
   },
   {
-    id: 'atom-one',
-    name: 'Atom One',
-    lightTheme: 'atom-one-light',
-    darkTheme: 'atom-one-dark'
+    id: 'github-dimmed',
+    name: 'GitHub Dimmed',
+    lightTheme: 'github-light',
+    darkTheme: 'github-dark-dimmed'
   },
   {
-    id: 'vs',
-    name: 'Visual Studio',
-    lightTheme: 'vs',
-    darkTheme: 'vs2015'
+    id: 'vitesse',
+    name: 'Vitesse',
+    lightTheme: 'vitesse-light',
+    darkTheme: 'vitesse-dark'
+  },
+  {
+    id: 'material',
+    name: 'Material Theme',
+    lightTheme: 'material-theme-lighter',
+    darkTheme: 'material-theme-darker'
+  },
+  {
+    id: 'nord',
+    name: 'Nord',
+    lightTheme: 'nord',
+    darkTheme: 'nord'
   },
   {
     id: 'monokai',
@@ -35,10 +50,10 @@ export const codeThemes: CodeTheme[] = [
     darkTheme: 'monokai'
   },
   {
-    id: 'nord',
-    name: 'Nord',
-    lightTheme: 'nord',
-    darkTheme: 'nord'
+    id: 'dracula',
+    name: 'Dracula',
+    lightTheme: 'dracula',
+    darkTheme: 'dracula'
   }
 ]
 
@@ -47,33 +62,6 @@ export const codeThemes: CodeTheme[] = [
  */
 export function getCodeThemeById(id: string): CodeTheme {
   return codeThemes.find(t => t.id === id) || codeThemes[0]
-}
-
-/**
- * 动态加载代码高亮主题CSS
- */
-export async function loadCodeTheme(themeName: string, isDark: boolean) {
-  const theme = getCodeThemeById(themeName)
-  const themeFile = isDark ? theme.darkTheme : theme.lightTheme
-
-  // 移除旧的主题样式
-  const oldLinks = document.querySelectorAll('link[data-code-theme]')
-  oldLinks.forEach(link => link.remove())
-
-  // 创建新的 link 标签
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/${themeFile}.min.css`
-  link.setAttribute('data-code-theme', themeName)
-
-  // 添加到 head
-  document.head.appendChild(link)
-
-  // 等待加载完成
-  return new Promise<void>((resolve, reject) => {
-    link.onload = () => resolve()
-    link.onerror = () => reject(new Error(`Failed to load theme: ${themeFile}`))
-  })
 }
 
 /**

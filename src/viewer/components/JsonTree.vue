@@ -1,7 +1,7 @@
 <template>
   <div class="json-tree">
     <!-- 对象或数组 -->
-    <div v-if="isObject || isArray" class="json-node" :style="{ paddingLeft: `${depth * 16}px` }">
+    <div v-if="isObject || isArray" class="json-node" :style="{ paddingLeft: `${depth * 32}px` }">
       <span class="toggle-icon" @click="toggleExpand">
         {{ isExpanded ? '▼' : '▶' }}
       </span>
@@ -23,13 +23,13 @@
         :depth="depth + 1"
         :max-depth="maxDepth"
       />
-      <div class="json-node closing-bracket" :style="{ paddingLeft: `${depth * 16}px` }">
+      <div class="json-node closing-bracket" :style="{ paddingLeft: `${depth * 32}px` }">
         <span class="bracket">{{ closeBracket }}</span>
       </div>
     </template>
 
     <!-- 基本类型：字符串、数字、布尔值、null -->
-    <div v-if="!isObject && !isArray" class="json-node primitive" :style="{ paddingLeft: `${depth * 16}px` }">
+    <div v-if="!isObject && !isArray" class="json-node primitive" :style="{ paddingLeft: `${depth * 32}px` }">
       <span v-if="nodeKey" class="key">{{ nodeKey }}:</span>
       <StringDecoder :value="data" :node-key="nodeKey" />
     </div>

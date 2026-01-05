@@ -11,16 +11,16 @@ export interface CodeTheme {
 
 export const codeThemes: CodeTheme[] = [
   {
-    id: 'atom-one',
-    name: 'Atom One',
-    lightTheme: 'atom-one-light',
-    darkTheme: 'atom-one-dark'
-  },
-  {
     id: 'github',
     name: 'GitHub',
     lightTheme: 'github',
     darkTheme: 'github-dark'
+  },
+  {
+    id: 'atom-one',
+    name: 'Atom One',
+    lightTheme: 'atom-one-light',
+    darkTheme: 'atom-one-dark'
   },
   {
     id: 'vs',
@@ -90,7 +90,7 @@ export function saveCodeThemePreference(themeId: string) {
  */
 export function loadCodeThemePreference(): string {
   if (typeof localStorage !== 'undefined') {
-    return localStorage.getItem('jsonl-viewer-code-theme') || 'atom-one'
+    return localStorage.getItem('jsonl-viewer-code-theme') || 'github'
   }
-  return 'atom-one'
+  return 'github'
 }

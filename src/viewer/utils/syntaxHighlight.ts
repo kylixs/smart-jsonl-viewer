@@ -51,7 +51,11 @@ async function getHighlighterInstance(): Promise<Highlighter> {
         'material-theme-darker',
         'nord',
         'monokai',
-        'dracula'
+        'dracula',
+        'dracula-soft',
+        'one-light',
+        'one-dark-pro',
+        'tokyo-night'
       ],
       langs: [
         'javascript',
@@ -106,6 +110,16 @@ export async function highlightCode(
     const html = highlighter.codeToHtml(code, {
       lang: shikiLang,
       theme: theme,
+      transformers: [
+        {
+          name: 'line-numbers',
+          line(node, line) {
+            // 为每一行添加 data-line 属性，用于 CSS 显示行号
+            node.properties['data-line'] = line
+            return node
+          }
+        }
+      ]
     })
 
     return html

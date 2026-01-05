@@ -432,6 +432,13 @@ watch([isCodeContent, decodedValue], () => {
   }
 })
 
+// 监听模态框打开，初始化代码高亮
+watch(showModal, (isOpen) => {
+  if (isOpen && isCodeContent.value && decodedValue.value) {
+    updateHighlightedCode()
+  }
+})
+
 // 辅助函数：转义 HTML
 function escapeHtml(text: string): string {
   return text
@@ -1126,11 +1133,35 @@ onUnmounted(() => {
   font-size: 13px;
   line-height: 1.6;
   overflow-x: auto;
+  counter-reset: line;
 }
 
 .code-highlight code {
   font-family: inherit;
   font-size: inherit;
+}
+
+/* 代码行号样式 */
+.code-highlight :deep(.line) {
+  position: relative;
+  padding-left: 3.5em;
+}
+
+.code-highlight :deep(.line::before) {
+  content: attr(data-line);
+  position: absolute;
+  left: 0;
+  width: 2.5em;
+  text-align: right;
+  padding-right: 1em;
+  color: #858585;
+  user-select: none;
+  opacity: 0.6;
+}
+
+/* 行号暗色主题 */
+:root.dark .code-highlight :deep(.line::before) {
+  color: #858585;
 }
 
 /* Shiki 主题样式是内联的，不需要额外的 CSS */

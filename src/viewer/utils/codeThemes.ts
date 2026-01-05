@@ -26,6 +26,12 @@ export const codeThemes: CodeTheme[] = [
     darkTheme: 'github-dark-dimmed'
   },
   {
+    id: 'one-dark-pro',
+    name: 'One Dark Pro',
+    lightTheme: 'one-light',
+    darkTheme: 'one-dark-pro'
+  },
+  {
     id: 'vitesse',
     name: 'Vitesse',
     lightTheme: 'vitesse-light',
@@ -52,8 +58,14 @@ export const codeThemes: CodeTheme[] = [
   {
     id: 'dracula',
     name: 'Dracula',
-    lightTheme: 'dracula',
+    lightTheme: 'dracula-soft',
     darkTheme: 'dracula'
+  },
+  {
+    id: 'tokyo-night',
+    name: 'Tokyo Night',
+    lightTheme: 'tokyo-night',
+    darkTheme: 'tokyo-night'
   }
 ]
 

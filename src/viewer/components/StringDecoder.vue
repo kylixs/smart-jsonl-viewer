@@ -127,6 +127,20 @@
                 >
                   自动检测
                 </button>
+
+                <div class="theme-selector-divider"></div>
+
+                <label class="code-toolbar-label">配色主题：</label>
+                <select
+                  v-model="selectedCodeTheme"
+                  @change="handleCodeThemeChange"
+                  class="theme-select"
+                  title="选择代码高亮主题"
+                >
+                  <option v-for="theme in availableCodeThemes" :key="theme.id" :value="theme.id">
+                    {{ theme.name }}
+                  </option>
+                </select>
               </div>
 
               <!-- 代码高亮显示或普通文本显示 -->
@@ -166,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick, onMounted } from 'vue'
 import JsonTree from './JsonTree.vue'
 import AnsiText from './AnsiText.vue'
 import { smartDecode, isDecodable as checkDecodable } from '../utils/decoder'
@@ -177,10 +191,12 @@ import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
 import { isCode, detectLanguage, SUPPORTED_LANGUAGES, type LanguageType } from '../utils/codeDetector'
 import { highlightCode } from '../utils/syntaxHighlight'
 import mermaid from 'mermaid'
-
-// 导入 highlight.js 主题样式
-import 'highlight.js/styles/github.css' // 亮色主题
-import 'highlight.js/styles/github-dark.css' // 暗色主题
+import {
+  codeThemes,
+  loadCodeTheme,
+  saveCodeThemePreference,
+  loadCodeThemePreference
+} from '../utils/codeThemes'
 
 // 初始化 mermaid
 mermaid.initialize({
@@ -207,6 +223,38 @@ const showToc = ref(true)
 const selectedLanguage = ref<LanguageType>('plaintext')
 const languageSearchQuery = ref('')
 const showLanguageDropdown = ref(false)
+
+// 代码高亮主题
+const availableCodeThemes = codeThemes
+const selectedCodeTheme = ref(loadCodeThemePreference())
+
+// 初始化加载主题
+onMounted(async () => {
+  try {
+    await loadCodeTheme(selectedCodeTheme.value, store.isDark)
+  } catch (err) {
+    console.error('Failed to load code theme:', err)
+  }
+})
+
+// 监听暗色模式变化，重新加载主题
+watch(() => store.isDark, async (isDark) => {
+  try {
+    await loadCodeTheme(selectedCodeTheme.value, isDark)
+  } catch (err) {
+    console.error('Failed to reload code theme:', err)
+  }
+})
+
+// 处理主题切换
+async function handleCodeThemeChange() {
+  saveCodeThemePreference(selectedCodeTheme.value)
+  try {
+    await loadCodeTheme(selectedCodeTheme.value, store.isDark)
+  } catch (err) {
+    console.error('Failed to change code theme:', err)
+  }
+}
 
 // 值类型
 const valueType = computed(() => {
@@ -905,6 +953,37 @@ onUnmounted(() => {
   transform: translateY(1px);
 }
 
+/* 主题选择器分隔线 */
+.theme-selector-divider {
+  width: 1px;
+  height: 24px;
+  background: #d0d0d0;
+  margin: 0 8px;
+}
+
+/* 主题选择下拉框 */
+.theme-select {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+  color: #333;
+}
+
+.theme-select:hover {
+  border-color: #2472c8;
+  box-shadow: 0 0 0 1px rgba(36, 114, 200, 0.1);
+}
+
+.theme-select:focus {
+  border-color: #2472c8;
+  box-shadow: 0 0 0 2px rgba(36, 114, 200, 0.2);
+}
+
 /* 语言选择器容器 */
 .language-selector-wrapper {
   position: relative;
@@ -1010,19 +1089,13 @@ onUnmounted(() => {
   font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  background: #f6f8fa;
   padding: 16px;
   border-radius: 6px;
   overflow-x: auto;
   margin: 0;
-  color: #24292f;
 }
 
-/* 暗色主题下使用 github-dark 样式 */
-:root.dark .code-highlight {
-  background: #0d1117;
-  color: #c9d1d9;
-}
+/* 暗色主题下的代码高亮容器样式由主题CSS控制 */
 
 /* Markdown 容器 - 支持侧边目录布局 */
 .markdown-container {
@@ -1382,6 +1455,28 @@ onUnmounted(() => {
 
 :root.dark .auto-detect-btn:active {
   background: #3d7ab3;
+}
+
+/* 主题选择器分隔线暗色主题 */
+:root.dark .theme-selector-divider {
+  background: #555;
+}
+
+/* 主题选择下拉框暗色主题 */
+:root.dark .theme-select {
+  background: #333;
+  border-color: #555;
+  color: #ddd;
+}
+
+:root.dark .theme-select:hover {
+  border-color: #569cd6;
+  box-shadow: 0 0 0 1px rgba(86, 156, 214, 0.2);
+}
+
+:root.dark .theme-select:focus {
+  border-color: #569cd6;
+  box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.3);
 }
 
 /* 语言选择器暗色主题 */

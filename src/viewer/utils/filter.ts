@@ -66,7 +66,7 @@ function matchInLine(
 
   // 搜索解码后的内容
   if (searchDecoded) {
-    return searchInObject(line.parsedData, keyword, searchMode)
+    return searchInObject(line.parsedData, keyword, searchMode, searchDecoded)
   }
 
   return false
@@ -94,7 +94,7 @@ function matchString(text: string, keyword: string, searchMode: SearchMode): boo
 /**
  * 在对象中递归搜索关键字
  */
-function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuzzy'): boolean {
+function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuzzy', searchDecoded: boolean = true): boolean {
   if (obj === null || obj === undefined) {
     return false
   }
@@ -106,8 +106,8 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
       return true
     }
 
-    // 如果是字符串，尝试解码后再搜索
-    if (typeof obj === 'string') {
+    // 如果是字符串，且开启了解码搜索，尝试解码后再搜索
+    if (typeof obj === 'string' && searchDecoded) {
       const unescaped = unescapeString(obj).toLowerCase()
       if (matchString(unescaped, keyword, searchMode)) {
         return true
@@ -116,7 +116,7 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
       // 尝试解析为 JSON 后再搜索
       try {
         const parsed = JSON.parse(obj)
-        if (searchInObject(parsed, keyword, searchMode)) {
+        if (searchInObject(parsed, keyword, searchMode, searchDecoded)) {
           return true
         }
       } catch {
@@ -129,7 +129,7 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
 
   // 递归搜索数组
   if (Array.isArray(obj)) {
-    return obj.some((item) => searchInObject(item, keyword, searchMode))
+    return obj.some((item) => searchInObject(item, keyword, searchMode, searchDecoded))
   }
 
   // 递归搜索对象
@@ -139,7 +139,7 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
       return true
     }
     // 搜索值
-    if (searchInObject(obj[key], keyword, searchMode)) {
+    if (searchInObject(obj[key], keyword, searchMode, searchDecoded)) {
       return true
     }
   }
@@ -162,7 +162,7 @@ function filterNodes(
 
   // 叶子节点
   if (typeof node !== 'object') {
-    if (searchInObject(node, keyword, searchMode)) {
+    if (searchInObject(node, keyword, searchMode, searchDecoded)) {
       return node
     }
     return null

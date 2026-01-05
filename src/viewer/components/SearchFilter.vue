@@ -40,7 +40,13 @@
           :class="{ active: index === selectedHistoryIndex }"
           @mousedown.prevent="selectHistory(item)"
         >
-          <span class="history-text">{{ item }}</span>
+          <div class="history-item-content">
+            <div class="history-tags">
+              <span class="history-tag search-mode">{{ getSearchModeLabel(item.searchMode) }}</span>
+              <span class="history-tag filter-mode">{{ getFilterModeLabel(item.filterMode) }}</span>
+            </div>
+            <span class="history-text">{{ item.keyword }}</span>
+          </div>
           <button class="history-delete" @mousedown.prevent.stop="deleteHistoryItem(item)" title="删除">
             ✕
           </button>
@@ -164,6 +170,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import type { FilterMode, SearchMode } from '../utils/types'
 import { useJsonlStore } from '../stores/jsonlStore'
 import {
+  type SearchHistoryItem,
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
@@ -185,11 +192,33 @@ const selectedHistoryIndex = ref(-1)
 const pendingSearchKeyword = ref('') // 待保存的搜索词
 const searchSaveTimer = ref<number>() // 3秒定时器
 const initialScrollTop = ref(0) // 记录搜索时的滚动位置
+const historyVersion = ref(0) // 用于触发历史列表更新
 
-// 根据当前搜索模式获取历史记录
-const searchHistory = computed(() => {
-  return getSearchHistory(searchMode.value)
+// 获取所有搜索历史（不再按模式过滤）
+const searchHistory = computed<SearchHistoryItem[]>(() => {
+  // 访问 historyVersion 以建立响应式依赖
+  historyVersion.value
+  return getSearchHistory()
 })
+
+// 获取搜索模式的标签文本
+function getSearchModeLabel(mode: SearchMode): string {
+  const labels = {
+    'fuzzy': '模糊',
+    'exact': '完全',
+    'jsonpath': 'JSONPath'
+  }
+  return labels[mode] || mode
+}
+
+// 获取过滤范围的标签文本
+function getFilterModeLabel(mode: FilterMode): string {
+  const labels = {
+    'line': '按行',
+    'node': '按节点'
+  }
+  return labels[mode] || mode
+}
 
 onMounted(() => {
   // 从 store 初始化
@@ -248,9 +277,10 @@ function handleScroll(event: Event) {
 // 保存待保存的搜索
 function savePendingSearch() {
   if (pendingSearchKeyword.value) {
-    addSearchHistory(searchMode.value, pendingSearchKeyword.value)
+    addSearchHistory(pendingSearchKeyword.value, searchMode.value, mode.value)
     pendingSearchKeyword.value = ''
     clearSearchSaveTimer()
+    historyVersion.value++ // 触发历史列表更新
   }
 }
 
@@ -303,24 +333,32 @@ function handleInputBlur() {
   }, 200)
 }
 
-function selectHistory(item: string) {
-  keyword.value = item
-  store.setSearchKeyword(item)
+function selectHistory(item: SearchHistoryItem) {
+  keyword.value = item.keyword
+  // 同时恢复当时的搜索模式和过滤范围
+  searchMode.value = item.searchMode
+  mode.value = item.filterMode
+  // 更新 store
+  store.setSearchKeyword(item.keyword)
+  store.setSearchMode(item.searchMode)
+  store.setFilterMode(item.filterMode)
   showHistoryDropdown.value = false
   selectedHistoryIndex.value = -1
   // 选择历史项时已经是完整的搜索词，无需再次保存
 }
 
-function deleteHistoryItem(item: string) {
-  removeSearchHistoryItem(searchMode.value, item)
+function deleteHistoryItem(item: SearchHistoryItem) {
+  removeSearchHistoryItem(item)
   // 强制刷新历史列表
   selectedHistoryIndex.value = -1
+  historyVersion.value++ // 触发历史列表更新
 }
 
 function clearAllHistory() {
-  clearSearchHistory(searchMode.value)
+  clearSearchHistory()
   showHistoryDropdown.value = false
   selectedHistoryIndex.value = -1
+  historyVersion.value++ // 触发历史列表更新
 }
 
 function navigateHistory(direction: number) {
@@ -374,8 +412,8 @@ function handleMaxLinesChange() {
 
 function fillExample(example: string) {
   keyword.value = example
-  // 点击示例会触发 @input 事件，进而调用 handleSearch
-  // handleSearch 会设置待保存状态
+  // 直接设置值不会触发 @input 事件，需要手动调用
+  handleSearch()
 }
 </script>
 
@@ -518,14 +556,53 @@ function fillExample(example: string) {
   background: #f5f5f5;
 }
 
-.history-text {
+.history-item-content {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
   flex: 1;
+  min-width: 0;
+}
+
+.history-tags {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.history-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.history-tag.search-mode {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.history-tag.filter-mode {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.history-text {
   font-size: 13px;
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
   color: #333;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
 
 .history-delete {
@@ -751,6 +828,18 @@ function fillExample(example: string) {
 
 :root.dark .history-text {
   color: #ddd;
+}
+
+:root.dark .history-tag.search-mode {
+  background: #1e3a5f;
+  color: #90caf9;
+  border-color: #2b5a8a;
+}
+
+:root.dark .history-tag.filter-mode {
+  background: #3a2a4a;
+  color: #ce93d8;
+  border-color: #5a3a6a;
 }
 
 :root.dark .history-delete {

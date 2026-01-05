@@ -3,6 +3,8 @@ import type { JsonLineNode, FilterMode, SearchMode } from '../utils/types'
 import { parseText } from '../utils/parser'
 import { filterJsonLines } from '../utils/filter'
 import { addSearchHistory } from '../utils/searchHistory'
+import type { Theme } from '../utils/themes'
+import { themes, getThemeById } from '../utils/themes'
 
 interface JsonlState {
   // 原始数据
@@ -19,8 +21,10 @@ interface JsonlState {
   searchDecoded: boolean
   // 文件类型
   fileType: 'jsonl' | 'json' | 'invalid' | null
-  // 主题
+  // 主题（明暗模式）
   theme: 'light' | 'dark'
+  // 主题配色
+  currentThemeColor: string
   // 全局展开/折叠状态
   globalExpanded: boolean
   // 展开深度（0 = 全部折叠，-1 = 全部展开，1-10 = 展开到指定深度）
@@ -39,6 +43,7 @@ export const useJsonlStore = defineStore('jsonl', {
     searchDecoded: true,
     fileType: null,
     theme: 'light',
+    currentThemeColor: 'blue',
     globalExpanded: true,
     expandDepth: -1,
     maxDisplayLines: 10
@@ -58,7 +63,13 @@ export const useJsonlStore = defineStore('jsonl', {
     hasSearch: (state) => state.searchKeyword.trim() !== '',
 
     // 是否为暗色主题
-    isDark: (state) => state.theme === 'dark'
+    isDark: (state) => state.theme === 'dark',
+
+    // 当前主题配色对象
+    currentTheme: (state): Theme => getThemeById(state.currentThemeColor),
+
+    // 所有可用主题
+    availableThemes: () => themes
   },
 
   actions: {
@@ -225,6 +236,29 @@ export const useJsonlStore = defineStore('jsonl', {
     },
 
     /**
+     * 设置主题配色
+     */
+    setThemeColor(themeId: string) {
+      this.currentThemeColor = themeId
+      // 保存到 localStorage
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('jsonl-viewer-theme-color', themeId)
+      }
+    },
+
+    /**
+     * 从 localStorage 加载主题配色
+     */
+    loadThemeColor() {
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('jsonl-viewer-theme-color')
+        if (saved) {
+          this.currentThemeColor = saved
+        }
+      }
+    },
+
+    /**
      * 设置最大显示行数
      */
     setMaxDisplayLines(lines: number) {
@@ -267,7 +301,7 @@ export const useJsonlStore = defineStore('jsonl', {
     confirmAndSaveSearch() {
       const keyword = this.searchKeyword.trim()
       if (keyword) {
-        addSearchHistory(this.searchMode, keyword)
+        addSearchHistory(keyword, this.searchMode, this.filterMode)
       }
     }
   }

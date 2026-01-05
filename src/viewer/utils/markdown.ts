@@ -266,6 +266,9 @@ ${rowsHtml}
 </table>`
   })
 
+  // 处理行尾硬换行（Markdown 标准：行尾两个空格 + 换行）
+  html = html.replace(/  \n/g, '<br>\n')
+
   // 段落 - 将双换行符转换为段落
   html = html.replace(/\n\n+/g, '</p><p>')
   html = `<p>${html}</p>`
@@ -287,8 +290,8 @@ ${rowsHtml}
   html = html.replace(/<p>\s*(<table>)/g, '$1')
   html = html.replace(/(<\/table>)\s*<\/p>/g, '$1')
 
-  // 单换行符转换为 <br>（在段落内）
-  html = html.replace(/\n/g, '<br>')
+  // 单换行符转换为空格（符合 Markdown 标准）
+  html = html.replace(/\n/g, ' ')
 
   return html
 }

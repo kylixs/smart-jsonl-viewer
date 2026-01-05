@@ -9,6 +9,31 @@
         <button class="action-btn" @click="toggleTheme" :title="themeTitle">
           {{ store.isDark ? '☀️' : '🌙' }}
         </button>
+        <div class="theme-selector">
+          <button class="action-btn theme-btn" @click.stop="toggleThemeMenu" title="选择主题配色">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 22C9.79 22 7.79 21.21 6.34 19.84C4.89 18.47 4 16.61 4 14.5C4 12.68 4.67 11.04 5.82 9.84C6.97 8.64 8.5 8 10.22 8C10.23 6.75 10.67 5.55 11.46 4.59C12.25 3.63 13.33 3 14.5 3C15.67 3 16.75 3.63 17.54 4.59C18.33 5.55 18.77 6.75 18.78 8C20.5 8 22.03 8.64 23.18 9.84C24.33 11.04 25 12.68 25 14.5C25 16.61 24.11 18.47 22.66 19.84C21.21 21.21 19.21 22 17 22H12Z" transform="translate(-2 -1)" fill="currentColor"/>
+              <circle cx="8" cy="11" r="1.5" fill="white"/>
+              <circle cx="12" cy="9" r="1.5" fill="white"/>
+              <circle cx="16" cy="11" r="1.5" fill="white"/>
+              <circle cx="10" cy="14" r="1.5" fill="white"/>
+              <circle cx="14" cy="14" r="1.5" fill="white"/>
+            </svg>
+          </button>
+          <div v-if="showThemeMenu" class="theme-menu" @click.stop>
+            <div
+              v-for="theme in store.availableThemes"
+              :key="theme.id"
+              class="theme-menu-item"
+              :class="{ active: theme.id === store.currentThemeColor }"
+              @click="selectTheme(theme.id)"
+            >
+              <span class="theme-color-preview" :style="{ background: `linear-gradient(135deg, ${theme.colors.gradientFrom} 0%, ${theme.colors.gradientTo} 100%)` }"></span>
+              <span class="theme-name">{{ theme.name }}</span>
+              <span v-if="theme.id === store.currentThemeColor" class="theme-check">✓</span>
+            </div>
+          </div>
+        </div>
         <button class="action-btn" @click="handleExport" title="导出" v-if="store.totalLines > 0">
           💾
         </button>
@@ -19,11 +44,14 @@
 
     <main class="app-main">
       <!-- 文件上传区域 -->
-      <div v-if="store.totalLines === 0" class="upload-area"
+      <div v-if="store.totalLines === 0"
+           class="upload-area"
+           tabindex="0"
            @drop.prevent="handleDrop"
            @dragover.prevent
            @dragenter="isDragging = true"
            @dragleave="isDragging = false"
+           @paste="handlePaste"
            :class="{ dragging: isDragging }">
         <div class="upload-content">
           <div class="upload-icon">📄</div>
@@ -31,12 +59,10 @@
           <p>支持 .jsonl、.json、.ndjson 格式</p>
           <label class="upload-btn">
             <input type="file" @change="handleFileSelect" accept=".jsonl,.json,.ndjson,.txt" hidden />
-            或点击选择文件
+            点击选择文件
           </label>
           <div class="divider">或</div>
-          <button class="paste-btn" @click="showPasteDialog = true">
-            📋 粘贴内容
-          </button>
+          <p class="paste-hint">📋 按 Ctrl+V 粘贴内容</p>
         </div>
       </div>
 
@@ -84,11 +110,25 @@
     <div v-if="error" class="error-toast">
       {{ error }}
     </div>
+
+    <!-- 滚动按钮 -->
+    <div v-if="store.totalLines > 0" class="scroll-buttons">
+      <button v-if="!isAtTop" class="scroll-btn scroll-to-top" @click="scrollToTop" title="到顶部">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 4L4 12L5.41 13.41L11 7.83V20H13V7.83L18.59 13.41L20 12L12 4Z" fill="currentColor"/>
+        </svg>
+      </button>
+      <button v-if="!isAtBottom" class="scroll-btn scroll-to-bottom" @click="scrollToBottom" title="到末尾">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 20L20 12L18.59 10.59L13 16.17V4H11V16.17L5.41 10.59L4 12L12 20Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useJsonlStore } from './stores/jsonlStore'
 import SearchFilter from './components/SearchFilter.vue'
 import JsonLineItem from './components/JsonLineItem.vue'
@@ -99,6 +139,14 @@ const isDragging = ref(false)
 const error = ref('')
 const showPasteDialog = ref(false)
 const pasteContent = ref('')
+const showThemeMenu = ref(false)
+
+// 滚动按钮状态
+const isAtTop = ref(true)
+const isAtBottom = ref(false)
+
+// 滚动配置：预留滚动的屏数（当内容很长时，先跳转到接近目标位置，然后再平滑滚动这么多屏）
+const SMOOTH_SCROLL_VIEWPORTS = 10
 
 const themeTitle = computed(() => {
   return store.isDark ? '切换到亮色主题' : '切换到暗色主题'
@@ -106,7 +154,9 @@ const themeTitle = computed(() => {
 
 // 立即加载并应用主题（在页面渲染前）
 store.loadTheme()
+store.loadThemeColor()
 applyTheme()
+applyThemeColors()
 
 onMounted(() => {
   // 加载保存的显示行数配置
@@ -114,6 +164,18 @@ onMounted(() => {
 
   // 监听来自 content script 的消息
   window.addEventListener('message', handleMessage)
+
+  // 监听滚动事件
+  window.addEventListener('scroll', handleScroll)
+  // 初始化滚动状态
+  handleScroll()
+
+  // 监听全局点击事件，关闭主题菜单
+  window.addEventListener('click', closeThemeMenu)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 function handleMessage(event: MessageEvent) {
@@ -161,6 +223,22 @@ function applyTheme() {
   } else {
     document.documentElement.classList.remove('dark')
   }
+}
+
+function applyThemeColors() {
+  const theme = store.currentTheme
+  const root = document.documentElement
+
+  root.style.setProperty('--theme-primary', theme.colors.primary)
+  root.style.setProperty('--theme-primary-dark', theme.colors.primaryDark)
+  root.style.setProperty('--theme-gradient-from', theme.colors.gradientFrom)
+  root.style.setProperty('--theme-gradient-to', theme.colors.gradientTo)
+  root.style.setProperty('--theme-shadow-color', theme.colors.shadowColor)
+}
+
+function setThemeColor(themeId: string) {
+  store.setThemeColor(themeId)
+  applyThemeColors()
 }
 
 function handleExport() {
@@ -214,6 +292,102 @@ function handlePasteSubmit() {
     showError('无法解析粘贴的内容：' + (err as Error).message)
   }
 }
+
+// 处理粘贴事件
+function handlePaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData('text')
+  if (text && text.trim()) {
+    try {
+      store.loadText(text)
+    } catch (err) {
+      showError('无法解析粘贴的内容：' + (err as Error).message)
+    }
+  }
+}
+
+// 主题菜单相关函数
+function toggleThemeMenu() {
+  showThemeMenu.value = !showThemeMenu.value
+}
+
+function selectTheme(themeId: string) {
+  setThemeColor(themeId)
+  showThemeMenu.value = false
+}
+
+function closeThemeMenu() {
+  showThemeMenu.value = false
+}
+
+// 滚动相关函数
+function handleScroll() {
+  const scrollTop = window.scrollY || document.documentElement.scrollTop
+  const scrollHeight = document.documentElement.scrollHeight
+  const clientHeight = document.documentElement.clientHeight
+
+  // 判断是否在顶部（容差5px）
+  isAtTop.value = scrollTop <= 5
+
+  // 判断是否在底部（容差5px）
+  isAtBottom.value = scrollTop + clientHeight >= scrollHeight - 5
+}
+
+function scrollToTop() {
+  const currentScroll = window.scrollY || document.documentElement.scrollTop
+  const viewportHeight = window.innerHeight
+  const threshold = viewportHeight * (SMOOTH_SCROLL_VIEWPORTS + 2)
+
+  if (currentScroll > threshold) {
+    // 距离太远，先快速跳转到接近顶部的位置，预留指定屏数进行平滑滚动
+    window.scrollTo({
+      top: viewportHeight * SMOOTH_SCROLL_VIEWPORTS,
+      behavior: 'instant'
+    })
+    // 短暂延迟后再平滑滚动到顶部
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }, 50)
+  } else {
+    // 距离较近，直接平滑滚动
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  }
+}
+
+function scrollToBottom() {
+  const currentScroll = window.scrollY || document.documentElement.scrollTop
+  const scrollHeight = document.documentElement.scrollHeight
+  const viewportHeight = window.innerHeight
+  const threshold = viewportHeight * (SMOOTH_SCROLL_VIEWPORTS + 2)
+  const distanceToBottom = scrollHeight - currentScroll - viewportHeight
+
+  if (distanceToBottom > threshold) {
+    // 距离太远，先快速跳转到接近底部的位置，预留指定屏数进行平滑滚动
+    const jumpTarget = scrollHeight - viewportHeight * SMOOTH_SCROLL_VIEWPORTS
+    window.scrollTo({
+      top: jumpTarget,
+      behavior: 'instant'
+    })
+    // 短暂延迟后再平滑滚动到底部
+    setTimeout(() => {
+      window.scrollTo({
+        top: scrollHeight,
+        behavior: 'smooth'
+      })
+    }, 50)
+  } else {
+    // 距离较近，直接平滑滚动
+    window.scrollTo({
+      top: scrollHeight,
+      behavior: 'smooth'
+    })
+  }
+}
 </script>
 
 <style>
@@ -245,7 +419,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -317,6 +491,112 @@ body {
   transform: translateY(0);
 }
 
+.theme-selector {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.theme-btn {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.theme-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.theme-menu-item:last-child {
+  border-bottom: none;
+}
+
+.theme-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.theme-menu-item.active {
+  background: #f0f7ff;
+}
+
+.theme-color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.theme-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.theme-check {
+  color: var(--theme-primary);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.theme-select {
+  padding: 6px 12px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  color: #333;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.theme-select:hover {
+  background: white;
+}
+
+.theme-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
 .app-main {
   min-height: calc(100vh - 80px);
 }
@@ -329,12 +609,20 @@ body {
   margin: 40px;
   border: 3px dashed #ddd;
   border-radius: 12px;
-  transition: border-color 0.3s, background 0.3s;
+  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+
+.upload-area:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 3%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-primary) 10%, transparent);
 }
 
 .upload-area.dragging {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 5%, transparent);
 }
 
 .upload-content {
@@ -362,7 +650,7 @@ body {
 .upload-btn {
   display: inline-block;
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -373,7 +661,7 @@ body {
 
 .upload-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px var(--theme-shadow-color);
 }
 
 .divider {
@@ -399,6 +687,25 @@ body {
 .paste-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(67, 206, 162, 0.4);
+}
+
+.paste-hint {
+  font-size: 15px;
+  color: #666;
+  margin: 8px 0 0 0;
+  padding: 12px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+  display: inline-block;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.upload-area:focus .paste-hint {
+  color: var(--theme-primary);
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 8%, white);
 }
 
 /* 粘贴对话框 */
@@ -499,7 +806,7 @@ body {
 }
 
 .paste-textarea:focus {
-  border-color: #667eea;
+  border-color: var(--theme-primary);
 }
 
 .paste-textarea::placeholder {
@@ -516,7 +823,7 @@ body {
 
 .paste-submit-btn {
   padding: 10px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -528,7 +835,7 @@ body {
 
 .paste-submit-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px var(--theme-shadow-color);
 }
 
 .paste-submit-btn:disabled {
@@ -609,9 +916,15 @@ body {
   border-color: #444;
 }
 
+#app.dark .upload-area:focus {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 5%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-primary) 15%, transparent);
+}
+
 #app.dark .upload-area.dragging {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
 }
 
 #app.dark .upload-content h2 {
@@ -620,6 +933,18 @@ body {
 
 #app.dark .upload-content p {
   color: #999;
+}
+
+#app.dark .paste-hint {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #999;
+}
+
+#app.dark .upload-area:focus .paste-hint {
+  color: var(--theme-primary);
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, #2a2a2a);
 }
 
 #app.dark .jsonl-content {
@@ -663,7 +988,7 @@ body {
 }
 
 #app.dark .paste-textarea:focus {
-  border-color: #667eea;
+  border-color: var(--theme-primary);
 }
 
 #app.dark .paste-textarea::placeholder {
@@ -683,5 +1008,87 @@ body {
 #app.dark .paste-cancel-btn:hover {
   background: #444;
   border-color: #666;
+}
+
+/* 滚动按钮 */
+.scroll-buttons {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 999;
+}
+
+.scroll-btn {
+  padding: 10px;
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--theme-shadow-color);
+  transition: all 0.3s ease;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInSlide 0.3s ease-out;
+}
+
+.scroll-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.scroll-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--theme-shadow-color) 133%, transparent);
+}
+
+.scroll-btn:active {
+  transform: translateY(0);
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 暗色主题下的滚动按钮 */
+#app.dark .scroll-btn {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8c 100%);
+  box-shadow: 0 4px 12px rgba(85, 104, 211, 0.4);
+}
+
+#app.dark .scroll-btn:hover {
+  box-shadow: 0 6px 16px rgba(85, 104, 211, 0.5);
+}
+
+/* 暗色主题下的主题菜单 */
+#app.dark .theme-menu {
+  background: #2a2a2a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+#app.dark .theme-menu-item {
+  color: #ddd;
+  border-bottom-color: #3a3a3a;
+}
+
+#app.dark .theme-menu-item:hover {
+  background: #3a3a3a;
+}
+
+#app.dark .theme-menu-item.active {
+  background: #2a3a4a;
 }
 </style>

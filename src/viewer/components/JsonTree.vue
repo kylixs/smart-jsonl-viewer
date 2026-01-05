@@ -1,6 +1,7 @@
 <template>
-  <div class="json-tree" :style="{ paddingLeft: `${depth * 20}px` }">
-    <div v-if="isObject || isArray" class="json-node">
+  <div class="json-tree">
+    <!-- 对象或数组 -->
+    <div v-if="isObject || isArray" class="json-node" :style="{ paddingLeft: `${depth * 16}px` }">
       <span class="toggle-icon" @click="toggleExpand">
         {{ isExpanded ? '▼' : '▶' }}
       </span>
@@ -22,13 +23,13 @@
         :depth="depth + 1"
         :max-depth="maxDepth"
       />
-      <div class="json-node" :style="{ paddingLeft: `${depth * 20}px` }">
+      <div class="json-node closing-bracket" :style="{ paddingLeft: `${depth * 16}px` }">
         <span class="bracket">{{ closeBracket }}</span>
       </div>
     </template>
 
     <!-- 基本类型：字符串、数字、布尔值、null -->
-    <div v-if="!isObject && !isArray" class="json-node primitive">
+    <div v-if="!isObject && !isArray" class="json-node primitive" :style="{ paddingLeft: `${depth * 16}px` }">
       <span v-if="nodeKey" class="key">{{ nodeKey }}:</span>
       <StringDecoder :value="data" :node-key="nodeKey" />
     </div>
@@ -120,10 +121,11 @@ function toggleExpand() {
   display: flex;
   align-items: baseline;
   gap: 4px;
+  min-height: 24px;
 }
 
-.json-node.primitive {
-  padding-left: 20px;
+.json-node.closing-bracket {
+  color: #888;
 }
 
 .toggle-icon {
@@ -133,6 +135,7 @@ function toggleExpand() {
   text-align: center;
   color: #666;
   transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .toggle-icon:hover {
@@ -142,6 +145,7 @@ function toggleExpand() {
 .key {
   color: #9cdcfe;
   font-weight: 500;
+  margin-right: 4px;
 }
 
 .bracket {
@@ -153,6 +157,7 @@ function toggleExpand() {
   color: #888;
   font-style: italic;
   font-size: 12px;
+  margin: 0 4px;
 }
 
 /* 暗色主题 */
@@ -173,6 +178,10 @@ function toggleExpand() {
 }
 
 :root.dark .collapsed-indicator {
+  color: #666;
+}
+
+:root.dark .json-node.closing-bracket {
   color: #666;
 }
 </style>

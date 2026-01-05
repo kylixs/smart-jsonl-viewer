@@ -110,7 +110,13 @@
 
     <div v-if="searchMode === 'jsonpath'" class="jsonpath-hint">
       <span class="hint-icon">💡</span>
-      <span class="hint-text">示例: <code>$.user.name</code>, <code>$.data[0]</code>, <code>$.items[*]</code>, <code>$..content</code></span>
+      <span class="hint-text">
+        示例:
+        <code @click="fillExample('$.user.name')">$.user.name</code>,
+        <code @click="fillExample('$.data[0]')">$.data[0]</code>,
+        <code @click="fillExample('$.items[*]')">$.items[*]</code>,
+        <code @click="fillExample('$..content')">$..content</code>
+      </span>
     </div>
 
     <div v-if="store.hasSearch" class="search-stats">
@@ -170,6 +176,11 @@ function handleDepthChange() {
 
 function handleMaxLinesChange() {
   store.setMaxDisplayLines(selectedMaxLines.value)
+}
+
+function fillExample(example: string) {
+  keyword.value = example
+  store.setSearchKeyword(example)
 }
 </script>
 
@@ -343,6 +354,21 @@ function handleMaxLinesChange() {
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
   font-size: 11px;
   color: #d32f2f;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.hint-text code:hover {
+  background: #ffebee;
+  border-color: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hint-text code:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 /* 暗色主题 */
@@ -409,6 +435,19 @@ function handleMaxLinesChange() {
 :root.dark .hint-text code {
   background: #2a2a2a;
   color: #ff6b6b;
+  border: 1px solid transparent;
+}
+
+:root.dark .hint-text code:hover {
+  background: #3a2a2a;
+  border-color: #ff6b6b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .hint-text code:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 :root.dark .depth-label {

@@ -1,6 +1,7 @@
 /**
  * 语法高亮工具
  * 使用 Shiki 实现 - VS Code 同款高亮引擎
+ * 优化策略：按需加载主题和语言，提升初始加载速度
  */
 
 import { createHighlighter, type Highlighter, type BundledLanguage, type BundledTheme } from 'shiki'
@@ -10,6 +11,11 @@ import type { LanguageType } from './codeDetector'
 let highlighterInstance: Highlighter | null = null
 let currentTheme: BundledTheme = 'github-light'
 let currentDarkTheme: BundledTheme = 'github-dark'
+
+// 已加载的主题集合
+const loadedThemes = new Set<BundledTheme>()
+// 已加载的语言集合
+const loadedLangs = new Set<BundledLanguage>()
 
 // 语言类型映射（将我们的类型映射到 Shiki 的语言名称）
 const languageMap: Partial<Record<LanguageType, BundledLanguage>> = {
@@ -36,64 +42,66 @@ const languageMap: Partial<Record<LanguageType, BundledLanguage>> = {
 }
 
 /**
- * 初始化或获取 Shiki 高亮器实例
+ * 初始化 Shiki 高亮器（仅加载默认主题和语言）
+ * 其他主题和语言按需加载
  */
 async function getHighlighterInstance(): Promise<Highlighter> {
   if (!highlighterInstance) {
+    // 仅加载默认主题，大幅提升初始化速度
     highlighterInstance = await createHighlighter({
-      themes: [
-        'github-light',
-        'github-dark',
-        'github-dark-dimmed',
-        'vitesse-light',
-        'vitesse-dark',
-        'material-theme-lighter',
-        'material-theme-darker',
-        'nord',
-        'monokai',
-        'dracula',
-        'dracula-soft',
-        'one-light',
-        'one-dark-pro',
-        'tokyo-night'
-      ],
-      langs: [
-        'javascript',
-        'typescript',
-        'python',
-        'bash',
-        'json',
-        'yaml',
-        'html',
-        'css',
-        'sql',
-        'java',
-        'cpp',
-        'csharp',
-        'go',
-        'rust',
-        'php',
-        'ruby',
-        'swift',
-        'kotlin',
-        'xml',
-        'markdown'
-      ],
+      themes: ['github-light', 'github-dark'],
+      langs: ['javascript'], // 仅加载最常用的语言
     })
+
+    // 标记已加载
+    loadedThemes.add('github-light')
+    loadedThemes.add('github-dark')
+    loadedLangs.add('javascript')
   }
   return highlighterInstance
 }
 
 /**
- * 设置当前主题
+ * 确保主题已加载
  */
-export function setTheme(lightTheme: BundledTheme, darkTheme: BundledTheme) {
+async function ensureThemeLoaded(theme: BundledTheme): Promise<void> {
+  if (loadedThemes.has(theme)) {
+    return
+  }
+
+  const highlighter = await getHighlighterInstance()
+  await highlighter.loadTheme(theme)
+  loadedThemes.add(theme)
+}
+
+/**
+ * 确保语言已加载
+ */
+async function ensureLangLoaded(lang: BundledLanguage): Promise<void> {
+  if (loadedLangs.has(lang)) {
+    return
+  }
+
+  const highlighter = await getHighlighterInstance()
+  await highlighter.loadLanguage(lang)
+  loadedLangs.add(lang)
+}
+
+/**
+ * 设置当前主题（并预加载）
+ */
+export async function setTheme(lightTheme: BundledTheme, darkTheme: BundledTheme) {
   currentTheme = lightTheme
   currentDarkTheme = darkTheme
+
+  // 预加载新主题
+  await ensureThemeLoaded(lightTheme)
+  await ensureThemeLoaded(darkTheme)
 }
 
 /**
  * 根据语言类型高亮代码（异步）
+ * 按需加载所需的主题和语言
  */
 export async function highlightCode(
   code: string,
@@ -106,6 +114,10 @@ export async function highlightCode(
     const highlighter = await getHighlighterInstance()
     const shikiLang = languageMap[language] || 'javascript'
     const theme = isDark ? currentDarkTheme : currentTheme
+
+    // 确保主题和语言已加载
+    await ensureThemeLoaded(theme)
+    await ensureLangLoaded(shikiLang)
 
     const html = highlighter.codeToHtml(code, {
       lang: shikiLang,

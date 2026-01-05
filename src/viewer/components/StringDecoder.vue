@@ -229,9 +229,9 @@ const availableCodeThemes = codeThemes
 const selectedCodeTheme = ref(loadCodeThemePreference())
 
 // 初始化设置 Shiki 主题
-const initTheme = () => {
+const initTheme = async () => {
   const theme = getCodeThemeById(selectedCodeTheme.value)
-  setTheme(theme.lightTheme, theme.darkTheme)
+  await setTheme(theme.lightTheme, theme.darkTheme)
 }
 
 // 初始化主题
@@ -247,10 +247,10 @@ watch(() => store.isDark, () => {
 })
 
 // 处理主题切换
-function handleCodeThemeChange() {
+async function handleCodeThemeChange() {
   saveCodeThemePreference(selectedCodeTheme.value)
   const theme = getCodeThemeById(selectedCodeTheme.value)
-  setTheme(theme.lightTheme, theme.darkTheme)
+  await setTheme(theme.lightTheme, theme.darkTheme)
   // 重新高亮代码
   if (isCodeContent.value && decodedValue.value) {
     updateHighlightedCode()

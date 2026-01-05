@@ -17,6 +17,14 @@
       <button v-if="keyword" class="clear-btn" @click="clearSearch" title="清空">
         ✕
       </button>
+      <button
+        v-if="!keyword && searchHistory.length > 0"
+        class="history-arrow-btn"
+        @mousedown.prevent="toggleHistoryDropdown"
+        title="查看搜索历史"
+      >
+        ▼
+      </button>
       <!-- 搜索历史下拉列表 -->
       <div v-if="showHistoryDropdown && searchHistory.length > 0" class="history-dropdown">
         <div class="history-header">
@@ -248,6 +256,10 @@ function selectCurrentHistory() {
   }
 }
 
+function toggleHistoryDropdown() {
+  showHistoryDropdown.value = !showHistoryDropdown.value
+}
+
 
 function handleModeChange() {
   store.setFilterMode(mode.value)
@@ -332,6 +344,25 @@ function fillExample(example: string) {
 
 .clear-btn:hover {
   color: #666;
+}
+
+/* 历史下拉箭头按钮 */
+.history-arrow-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.history-arrow-btn:hover {
+  color: #666;
+  transform: translateY(1px);
 }
 
 /* 搜索历史下拉列表 */
@@ -585,6 +616,15 @@ function fillExample(example: string) {
 }
 
 :root.dark .clear-btn:hover {
+  color: #999;
+}
+
+/* 历史下拉箭头按钮暗色主题 */
+:root.dark .history-arrow-btn {
+  color: #666;
+}
+
+:root.dark .history-arrow-btn:hover {
   color: #999;
 }
 

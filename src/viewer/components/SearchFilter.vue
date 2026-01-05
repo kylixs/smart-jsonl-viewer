@@ -204,12 +204,8 @@ watch(searchMode, () => {
 function handleSearch() {
   const trimmedKeyword = keyword.value.trim()
   store.setSearchKeyword(trimmedKeyword)
-
-  // 保存到历史记录（只有非空时）
-  if (trimmedKeyword) {
-    addSearchHistory(searchMode.value, trimmedKeyword)
-    showHistoryDropdown.value = false
-  }
+  // 注意：不在这里保存历史，避免输入时产生大量中间状态
+  // 只在明确执行搜索时保存（Enter 键或点击历史项）
 }
 
 function handleInputBlur() {
@@ -225,6 +221,7 @@ function selectHistory(item: string) {
   store.setSearchKeyword(item)
   showHistoryDropdown.value = false
   selectedHistoryIndex.value = -1
+  // 选择历史项时已经是完整的搜索词，无需再次保存
 }
 
 function deleteHistoryItem(item: string) {
@@ -250,8 +247,15 @@ function navigateHistory(direction: number) {
 
 function selectCurrentHistory() {
   if (selectedHistoryIndex.value >= 0 && selectedHistoryIndex.value < searchHistory.value.length) {
+    // 选择了历史项
     selectHistory(searchHistory.value[selectedHistoryIndex.value])
   } else {
+    // 按 Enter 执行搜索，此时保存到历史
+    const trimmedKeyword = keyword.value.trim()
+    if (trimmedKeyword) {
+      addSearchHistory(searchMode.value, trimmedKeyword)
+      showHistoryDropdown.value = false
+    }
     handleSearch()
   }
 }
@@ -289,6 +293,8 @@ function handleMaxLinesChange() {
 function fillExample(example: string) {
   keyword.value = example
   store.setSearchKeyword(example)
+  // 点击示例也是明确的搜索行为，保存到历史
+  addSearchHistory(searchMode.value, example)
 }
 </script>
 

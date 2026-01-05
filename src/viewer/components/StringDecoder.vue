@@ -180,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import JsonTree from './JsonTree.vue'
 import AnsiText from './AnsiText.vue'
 import { smartDecode, isDecodable as checkDecodable } from '../utils/decoder'
@@ -228,31 +228,33 @@ const showLanguageDropdown = ref(false)
 const availableCodeThemes = codeThemes
 const selectedCodeTheme = ref(loadCodeThemePreference())
 
-// 初始化设置 Shiki 主题
+// Shiki 是否已初始化
+const shikiInitialized = ref(false)
+
+// 初始化设置 Shiki 主题（延迟初始化，不阻塞页面渲染）
 const initTheme = async () => {
+  if (shikiInitialized.value) return
+
   const theme = getCodeThemeById(selectedCodeTheme.value)
   await setTheme(theme.lightTheme, theme.darkTheme)
+  shikiInitialized.value = true
 }
 
-// 初始化主题
-onMounted(() => {
-  initTheme()
-})
-
-// 监听暗色模式变化，触发代码重新高亮
+// 监听暗色模式变化，触发代码重新高亮（仅在弹窗打开时）
 watch(() => store.isDark, () => {
-  if (isCodeContent.value && decodedValue.value) {
+  if (showModal.value && isCodeContent.value && decodedValue.value) {
     updateHighlightedCode()
   }
 })
 
-// 处理主题切换
+// 处理主题切换（仅在弹窗打开时重新高亮）
 async function handleCodeThemeChange() {
   saveCodeThemePreference(selectedCodeTheme.value)
   const theme = getCodeThemeById(selectedCodeTheme.value)
   await setTheme(theme.lightTheme, theme.darkTheme)
+
   // 重新高亮代码
-  if (isCodeContent.value && decodedValue.value) {
+  if (showModal.value && isCodeContent.value && decodedValue.value) {
     updateHighlightedCode()
   }
 }
@@ -402,11 +404,16 @@ watch(showModal, async (isOpen) => {
 // 渲染后的代码 HTML（语法高亮）- 使用 ref 因为 Shiki 是异步的
 const highlightedCode = ref('')
 
-// 异步更新代码高亮
+// 异步更新代码高亮（仅在弹窗打开时调用）
 async function updateHighlightedCode() {
   if (!isCodeContent.value) {
     highlightedCode.value = `<pre><code>${escapeHtml(decodedValue.value)}</code></pre>`
     return
+  }
+
+  // 确保 Shiki 已初始化
+  if (!shikiInitialized.value) {
+    await initTheme()
   }
 
   try {
@@ -418,23 +425,9 @@ async function updateHighlightedCode() {
   }
 }
 
-// 监听语言变化，重新高亮
+// 监听语言变化，重新高亮（仅在弹窗打开时）
 watch(selectedLanguage, () => {
-  if (isCodeContent.value && decodedValue.value) {
-    updateHighlightedCode()
-  }
-})
-
-// 监听代码内容变化，触发高亮
-watch([isCodeContent, decodedValue], () => {
-  if (isCodeContent.value && decodedValue.value) {
-    updateHighlightedCode()
-  }
-})
-
-// 监听模态框打开，初始化代码高亮
-watch(showModal, (isOpen) => {
-  if (isOpen && isCodeContent.value && decodedValue.value) {
+  if (showModal.value && isCodeContent.value && decodedValue.value) {
     updateHighlightedCode()
   }
 })
@@ -492,7 +485,7 @@ const selectedLanguageLabel = computed(() => {
 })
 
 // 弹窗打开时重置视图模式并自动检测内容类型
-watch(showModal, (isOpen) => {
+watch(showModal, async (isOpen) => {
   if (isOpen) {
     showToc.value = true
 
@@ -507,6 +500,11 @@ watch(showModal, (isOpen) => {
       selectedLanguage.value = detectLanguage(decodedValue.value)
       // 初始化语言搜索框显示当前选择的语言
       languageSearchQuery.value = selectedLanguageLabel.value
+
+      // 异步初始化代码高亮（不阻塞弹窗显示）
+      nextTick(() => {
+        updateHighlightedCode()
+      })
     } else if (isMarkdownContent.value) {
       modalViewMode.value = 'markdown'
     } else {

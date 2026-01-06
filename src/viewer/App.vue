@@ -143,6 +143,17 @@
         </svg>
       </button>
     </div>
+
+    <!-- 后台加载进度条（底部悬浮，半透明） -->
+    <div v-if="store.isBackgroundLoading" class="loading-progress">
+      <div class="loading-progress-content">
+        <span class="loading-progress-text">正在加载...</span>
+        <span class="loading-progress-count">{{ store.loadedCount }} / {{ store.totalCount }} 行</span>
+        <div class="loading-progress-bar">
+          <div class="loading-progress-fill" :style="{ width: progressPercentage + '%' }"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -174,6 +185,12 @@ const SMOOTH_SCROLL_VIEWPORTS = 10
 
 const themeTitle = computed(() => {
   return store.isDark ? '切换到亮色主题' : '切换到暗色主题'
+})
+
+// 后台加载进度百分比
+const progressPercentage = computed(() => {
+  if (store.totalCount === 0) return 0
+  return Math.floor((store.loadedCount / store.totalCount) * 100)
 })
 
 // 检测是否为自动加载模式（来自页面拦截）
@@ -213,12 +230,24 @@ onBeforeUnmount(() => {
 
 function handleMessage(event: MessageEvent) {
   if (event.data.type === 'LOAD_JSONL') {
+    const msgStartTime = performance.now()
+    console.log(`[${new Date().toISOString()}] ########## handleMessage 开始 ##########`)
+    console.log(`[${new Date().toISOString()}] 消息类型: ${event.data.type}, 数据长度: ${event.data.data.length}`)
+
     try {
+      const loadStartTime = performance.now()
       store.loadText(event.data.data)
+      const loadTime = performance.now() - loadStartTime
+      console.log(`[${new Date().toISOString()}] store.loadText 完成, 耗时 ${loadTime.toFixed(2)}ms`)
+
       // 加载成功后关闭加载状态
       isLoading.value = false
+
+      const msgTime = performance.now() - msgStartTime
+      console.log(`[${new Date().toISOString()}] ########## handleMessage 完成 ########## 总耗时 ${msgTime.toFixed(2)}ms`)
     } catch (err) {
-      showError('无法解析文件内容')
+      console.error(`[${new Date().toISOString()}] 解析文件失败:`, err)
+      showError('无法解析文件内容: ' + (err as Error).message)
       isLoading.value = false
     }
   }
@@ -240,10 +269,26 @@ function handleFileSelect(event: Event) {
 }
 
 async function loadFile(file: File) {
+  const funcStartTime = performance.now()
+  console.log(`[${new Date().toISOString()}] ########## loadFile 开始 ##########`)
+  console.log(`[${new Date().toISOString()}] 文件名: ${file.name}, 大小: ${file.size} 字节`)
+
   try {
+    const readStartTime = performance.now()
     const text = await file.text()
+    const readTime = performance.now() - readStartTime
+    console.log(`[${new Date().toISOString()}] 文件读取完成: ${text.length} 字符, 耗时 ${readTime.toFixed(2)}ms`)
+    console.log(`[${new Date().toISOString()}] 文件前200字符: ${text.substring(0, 200)}`)
+
+    const loadStartTime = performance.now()
     store.loadText(text)
+    const loadTime = performance.now() - loadStartTime
+    console.log(`[${new Date().toISOString()}] store.loadText 完成, 耗时 ${loadTime.toFixed(2)}ms`)
+
+    const funcTime = performance.now() - funcStartTime
+    console.log(`[${new Date().toISOString()}] ########## loadFile 完成 ########## 总耗时 ${funcTime.toFixed(2)}ms`)
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] 文件加载失败:`, err)
     showError('文件读取失败：' + (err as Error).message)
   }
 }
@@ -1233,5 +1278,86 @@ body {
 
 #app.dark .load-more-info {
   color: #999;
+}
+
+/* 后台加载进度条（底部悬浮，半透明） */
+.loading-progress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 998;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.1);
+  animation: slideInUp 0.3s ease-out;
+}
+
+.loading-progress-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-progress-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.loading-progress-count {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.loading-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* 暗色主题下的进度条 */
+#app.dark .loading-progress {
+  background: rgba(42, 42, 42, 0.95);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+}
+
+#app.dark .loading-progress-text {
+  color: #ddd;
+}
+
+#app.dark .loading-progress-count {
+  color: #999;
+}
+
+#app.dark .loading-progress-bar {
+  background: #444;
+}
+
+/* 滑入动画 */
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 </style>

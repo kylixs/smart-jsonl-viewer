@@ -28,6 +28,128 @@ export function parseJsonLines(text: string): JsonLineNode[] {
 }
 
 /**
+ * 增量解析 JSONL（首屏快速显示，后台继续解析）
+ */
+export function parseJsonLinesIncremental(
+  text: string,
+  initialBatchSize: number = 100,
+  onProgress?: (lines: JsonLineNode[], isComplete: boolean) => void
+): JsonLineNode[] {
+  const funcStartTime = performance.now()
+  console.log(`[${new Date().toISOString()}] parseJsonLinesIncremental 开始`)
+
+  const splitStartTime = performance.now()
+  const allLines = text.split('\n').filter((line) => line.trim())
+  const splitTime = performance.now() - splitStartTime
+  console.log(`[${new Date().toISOString()}] 文本切分完成: ${allLines.length} 行, 耗时 ${splitTime.toFixed(2)}ms`)
+
+  const result: JsonLineNode[] = []
+
+  // 首先解析前 N 行，快速返回
+  const firstBatch = Math.min(initialBatchSize, allLines.length)
+  const firstBatchStartTime = performance.now()
+  console.log(`[${new Date().toISOString()}] 开始解析首批 ${firstBatch} 行`)
+
+  for (let i = 0; i < firstBatch; i++) {
+    try {
+      const parsedData = JSON.parse(allLines[i])
+      result.push({
+        id: `line-${i}`,
+        lineNumber: i + 1,
+        rawContent: allLines[i],
+        parsedData,
+        isExpanded: false,
+        decodedStrings: new Map()
+      })
+    } catch (error) {
+      console.warn(`Failed to parse line ${i + 1}:`, error)
+    }
+  }
+
+  const firstBatchTime = performance.now() - firstBatchStartTime
+  console.log(`[${new Date().toISOString()}] 首批解析完成: ${result.length} 行, 耗时 ${firstBatchTime.toFixed(2)}ms`)
+
+  // 回调首批数据
+  if (onProgress) {
+    const callbackStartTime = performance.now()
+    onProgress([...result], allLines.length <= firstBatch)
+    const callbackTime = performance.now() - callbackStartTime
+    console.log(`[${new Date().toISOString()}] 首批进度回调完成, 耗时 ${callbackTime.toFixed(2)}ms`)
+  }
+
+  const funcTime = performance.now() - funcStartTime
+  console.log(`[${new Date().toISOString()}] parseJsonLinesIncremental 同步部分完成, 总耗时 ${funcTime.toFixed(2)}ms`)
+
+  // 后台异步解析剩余行
+  if (allLines.length > firstBatch) {
+    console.log(`[${new Date().toISOString()}] 启动后台解析: 剩余 ${allLines.length - firstBatch} 行`)
+    const backgroundStartTime = performance.now()
+
+    const parseRemaining = (startIndex: number) => {
+      const batchStartTime = performance.now()
+      const batchSize = 500 // 每批解析500行
+      const endIndex = Math.min(startIndex + batchSize, allLines.length)
+
+      console.log(`[${new Date().toISOString()}] 后台批次开始: 行 ${startIndex}-${endIndex}`)
+
+      for (let i = startIndex; i < endIndex; i++) {
+        try {
+          const parsedData = JSON.parse(allLines[i])
+          result.push({
+            id: `line-${i}`,
+            lineNumber: i + 1,
+            rawContent: allLines[i],
+            parsedData,
+            isExpanded: false,
+            decodedStrings: new Map()
+          })
+        } catch (error) {
+          console.warn(`Failed to parse line ${i + 1}:`, error)
+        }
+      }
+
+      const batchTime = performance.now() - batchStartTime
+      console.log(`[${new Date().toISOString()}] 后台批次完成: 解析 ${endIndex - startIndex} 行, 耗时 ${batchTime.toFixed(2)}ms`)
+
+      // 通知进度
+      if (onProgress) {
+        const callbackStartTime = performance.now()
+        const isComplete = endIndex >= allLines.length
+        onProgress([...result], isComplete)
+        const callbackTime = performance.now() - callbackStartTime
+        console.log(`[${new Date().toISOString()}] 进度回调完成: ${result.length}/${allLines.length} 行, isComplete=${isComplete}, 耗时 ${callbackTime.toFixed(2)}ms`)
+
+        if (isComplete) {
+          const totalBackgroundTime = performance.now() - backgroundStartTime
+          console.log(`[${new Date().toISOString()}] 后台解析全部完成, 后台总耗时 ${totalBackgroundTime.toFixed(2)}ms`)
+        }
+      }
+
+      // 继续解析下一批
+      if (endIndex < allLines.length) {
+        // 使用 requestIdleCallback 或 setTimeout
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(() => parseRemaining(endIndex))
+        } else {
+          setTimeout(() => parseRemaining(endIndex), 0)
+        }
+      }
+    }
+
+    // 启动后台解析
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => parseRemaining(firstBatch))
+    } else {
+      setTimeout(() => parseRemaining(firstBatch), 0)
+    }
+  } else {
+    console.log(`[${new Date().toISOString()}] 无需后台解析 (总行数 <= ${initialBatchSize})`)
+  }
+
+  return result
+}
+
+/**
  * 解析单个 JSON 对象（用于普通 JSON 文件）
  */
 export function parseJson(text: string): JsonLineNode | null {
@@ -124,6 +246,73 @@ export function parseText(text: string): {
     }
   }
 
+  return { type: 'invalid', data: null }
+}
+
+/**
+ * 自动检测并增量解析文本（首屏快速，后台继续）
+ */
+export function parseTextIncremental(
+  text: string,
+  onProgress?: (lines: JsonLineNode[], isComplete: boolean) => void
+): {
+  type: 'jsonl' | 'json' | 'invalid'
+  data: JsonLineNode[] | null
+} {
+  const funcStartTime = performance.now()
+  console.log(`[${new Date().toISOString()}] parseTextIncremental 开始, 文本长度: ${text.length}`)
+
+  if (!text.trim()) {
+    console.log(`[${new Date().toISOString()}] parseTextIncremental 结束: 空文本`)
+    return { type: 'invalid', data: null }
+  }
+
+  // 先检测是否为 JSONL
+  const detectStartTime = performance.now()
+  const isJSONL = isJsonLines(text)
+  const detectTime = performance.now() - detectStartTime
+  console.log(`[${new Date().toISOString()}] 格式检测完成: isJsonLines=${isJSONL}, 耗时 ${detectTime.toFixed(2)}ms`)
+
+  if (isJSONL) {
+    const parseStartTime = performance.now()
+    const data = parseJsonLinesIncremental(text, 100, onProgress)
+    const parseTime = performance.now() - parseStartTime
+    const totalTime = performance.now() - funcStartTime
+    console.log(`[${new Date().toISOString()}] parseTextIncremental 完成: type=jsonl, 同步解析耗时 ${parseTime.toFixed(2)}ms, 总耗时 ${totalTime.toFixed(2)}ms`)
+    return {
+      type: 'jsonl',
+      data
+    }
+  }
+
+  // 检测是否为普通 JSON
+  const isJSON = isValidJson(text)
+  console.log(`[${new Date().toISOString()}] 格式检测: isValidJson=${isJSON}`)
+
+  if (isJSON) {
+    const parseStartTime = performance.now()
+    const parsed = parseJson(text)
+    const parseTime = performance.now() - parseStartTime
+    console.log(`[${new Date().toISOString()}] JSON 解析完成, 耗时 ${parseTime.toFixed(2)}ms`)
+
+    const data = parsed ? [parsed] : null
+    if (onProgress && data) {
+      const callbackStartTime = performance.now()
+      onProgress(data, true)
+      const callbackTime = performance.now() - callbackStartTime
+      console.log(`[${new Date().toISOString()}] JSON 进度回调完成, 耗时 ${callbackTime.toFixed(2)}ms`)
+    }
+
+    const totalTime = performance.now() - funcStartTime
+    console.log(`[${new Date().toISOString()}] parseTextIncremental 完成: type=json, 总耗时 ${totalTime.toFixed(2)}ms`)
+    return {
+      type: 'json',
+      data
+    }
+  }
+
+  const totalTime = performance.now() - funcStartTime
+  console.log(`[${new Date().toISOString()}] parseTextIncremental 结束: type=invalid, 总耗时 ${totalTime.toFixed(2)}ms`)
   return { type: 'invalid', data: null }
 }
 

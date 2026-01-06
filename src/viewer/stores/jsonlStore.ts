@@ -31,6 +31,10 @@ interface JsonlState {
   expandDepth: number
   // 最大显示行数（-1 = 不限制，其他正整数 = 限制显示行数）
   maxDisplayLines: number
+  // 当前可见行数（用于分页加载优化）
+  visibleCount: number
+  // 每次加载的批次大小
+  batchSize: number
 }
 
 export const useJsonlStore = defineStore('jsonl', {
@@ -46,18 +50,23 @@ export const useJsonlStore = defineStore('jsonl', {
     currentThemeColor: 'blue',
     globalExpanded: true,
     expandDepth: -1,
-    maxDisplayLines: 10
+    maxDisplayLines: 10,
+    visibleCount: 100, // 初始显示 100 行
+    batchSize: 50, // 每次加载 50 行
   }),
 
   getters: {
-    // 当前显示的行
-    displayLines: (state) => state.filteredLines,
+    // 当前显示的行（分页优化，只渲染可见部分）
+    displayLines: (state) => state.filteredLines.slice(0, state.visibleCount),
 
     // 总行数
     totalLines: (state) => state.allLines.length,
 
     // 过滤后的行数
     filteredCount: (state) => state.filteredLines.length,
+
+    // 是否还有更多数据可以加载
+    hasMore: (state) => state.visibleCount < state.filteredLines.length,
 
     // 是否有搜索
     hasSearch: (state) => state.searchKeyword.trim() !== '',
@@ -155,6 +164,8 @@ export const useJsonlStore = defineStore('jsonl', {
           this.searchDecoded
         )
       }
+      // 重置可见行数（避免渲染过多行）
+      this.resetVisibleCount()
     },
 
     /**
@@ -303,6 +314,23 @@ export const useJsonlStore = defineStore('jsonl', {
       if (keyword) {
         addSearchHistory(keyword, this.searchMode, this.filterMode)
       }
+    },
+
+    /**
+     * 加载更多行（分页加载优化）
+     */
+    loadMore() {
+      this.visibleCount = Math.min(
+        this.visibleCount + this.batchSize,
+        this.filteredLines.length
+      )
+    },
+
+    /**
+     * 重置可见行数到初始值
+     */
+    resetVisibleCount() {
+      this.visibleCount = 100
     }
   }
 })

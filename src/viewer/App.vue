@@ -103,6 +103,16 @@
             :key="line.id"
             :line="line"
           />
+
+          <!-- 加载更多提示 -->
+          <div v-if="store.hasMore" class="load-more">
+            <div class="load-more-info">
+              已显示 {{ store.displayLines.length }} / {{ store.filteredCount }} 行
+            </div>
+            <button class="load-more-btn" @click="store.loadMore()">
+              加载更多 ({{ Math.min(store.batchSize, store.filteredCount - store.displayLines.length) }} 行)
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -330,6 +340,12 @@ function handleScroll() {
 
   // 判断是否在底部（容差5px）
   isAtBottom.value = scrollTop + clientHeight >= scrollHeight - 5
+
+  // 自动加载更多：当距离底部不到 500px 且还有更多数据时
+  const distanceToBottom = scrollHeight - scrollTop - clientHeight
+  if (distanceToBottom < 500 && store.hasMore) {
+    store.loadMore()
+  }
 }
 
 function scrollToTop() {
@@ -1090,5 +1106,53 @@ body {
 
 #app.dark .theme-menu-item.active {
   background: #2a3a4a;
+}
+
+/* 加载更多按钮 */
+.load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  margin: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.load-more-info {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.load-more-btn {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px var(--theme-shadow-color);
+}
+
+.load-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--theme-shadow-color);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+}
+
+/* 暗色主题下的加载更多 */
+#app.dark .load-more {
+  border-top-color: #444;
+}
+
+#app.dark .load-more-info {
+  color: #999;
 }
 </style>

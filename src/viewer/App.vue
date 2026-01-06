@@ -34,8 +34,43 @@
             </div>
           </div>
         </div>
+        <div class="settings-selector">
+          <button class="action-btn settings-btn" @click.stop="toggleSettingsPanel" title="设置">
+            ⚙️
+          </button>
+          <div v-if="showSettingsPanel" class="settings-panel" @click.stop>
+            <div class="settings-header">
+              <span class="settings-title">设置</span>
+              <button class="settings-close" @click="showSettingsPanel = false" title="关闭">
+                ✕
+              </button>
+            </div>
+            <div class="settings-content">
+              <div class="setting-item">
+                <label class="setting-label">预览行数:</label>
+                <select v-model="selectedMaxLines" @change="handleMaxLinesChange" class="setting-select">
+                  <option :value="-1">不限制</option>
+                  <option :value="5">5行</option>
+                  <option :value="10">10行</option>
+                  <option :value="20">20行</option>
+                  <option :value="30">30行</option>
+                  <option :value="50">50行</option>
+                  <option :value="100">100行</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label">缩进字符数:</label>
+                <select v-model="selectedIndentSize" @change="handleIndentSizeChange" class="setting-select">
+                  <option :value="2">2个空格</option>
+                  <option :value="4">4个空格</option>
+                  <option :value="8">8个空格</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
         <button class="action-btn" @click="handleExport" title="导出" v-if="store.totalLines > 0">
-          💾
+          📥
         </button>
       </div>
     </header>
@@ -163,6 +198,7 @@ import { useJsonlStore } from './stores/jsonlStore'
 import SearchFilter from './components/SearchFilter.vue'
 import JsonLineItem from './components/JsonLineItem.vue'
 import { exportToJsonLines, exportToJson } from './utils/parser'
+import { getSettings, saveSettings } from './utils/settings'
 
 const store = useJsonlStore()
 const isDragging = ref(false)
@@ -170,6 +206,9 @@ const error = ref('')
 const showPasteDialog = ref(false)
 const pasteContent = ref('')
 const showThemeMenu = ref(false)
+const showSettingsPanel = ref(false)
+const selectedMaxLines = ref(10)
+const selectedIndentSize = ref(2)
 
 // 自动加载模式（从 URL 参数判断是否来自页面拦截）
 const isAutoLoad = ref(false)
@@ -233,8 +272,13 @@ applyTheme()
 applyThemeColors()
 
 onMounted(() => {
-  // 加载保存的显示行数配置
-  store.loadMaxDisplayLines()
+  // 加载设置
+  const settings = getSettings()
+  selectedMaxLines.value = settings.maxDisplayLines
+  selectedIndentSize.value = settings.indentSize
+
+  // 应用设置到 store
+  store.setMaxDisplayLines(settings.maxDisplayLines)
 
   // 监听来自 content script 的消息
   window.addEventListener('message', handleMessage)
@@ -249,7 +293,13 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  // 清理事件监听器
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('message', handleMessage)
+  window.removeEventListener('click', closeThemeMenu)
+
+  // 清空 Store 数据，释放内存
+  store.cleanup()
 })
 
 function handleMessage(event: MessageEvent) {
@@ -499,6 +549,29 @@ function scrollToBottom() {
     })
   }
 }
+
+function toggleSettingsPanel() {
+  showSettingsPanel.value = !showSettingsPanel.value
+}
+
+function handleMaxLinesChange() {
+  store.setMaxDisplayLines(selectedMaxLines.value)
+
+  // 保存到本地存储
+  const settings = getSettings()
+  settings.maxDisplayLines = selectedMaxLines.value
+  saveSettings(settings)
+}
+
+function handleIndentSizeChange() {
+  // 保存到本地存储
+  const settings = getSettings()
+  settings.indentSize = selectedIndentSize.value
+  saveSettings(settings)
+
+  // TODO: 将缩进字符数应用到 store 或 JSON 渲染
+  console.log('缩进字符数已保存:', selectedIndentSize.value)
+}
 </script>
 
 <style>
@@ -706,6 +779,103 @@ body {
 .theme-select:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+/* 设置选择器 */
+.settings-selector {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.settings-btn {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: slideDown 0.2s ease-out;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9f9f9;
+  border-radius: 6px 6px 0 0;
+}
+
+.settings-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.settings-close:hover {
+  color: #666;
+}
+
+.settings-content {
+  padding: 12px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.setting-select {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.setting-select:focus {
+  border-color: #4a90e2;
 }
 
 .app-main {
@@ -1254,6 +1424,44 @@ body {
 
 #app.dark .theme-menu-item.active {
   background: #2a3a4a;
+}
+
+/* 暗色主题下的设置面板 */
+#app.dark .settings-panel {
+  background: #2a2a2a;
+  border-color: #444;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+#app.dark .settings-header {
+  background: #1e1e1e;
+  border-bottom-color: #444;
+}
+
+#app.dark .settings-title {
+  color: #999;
+}
+
+#app.dark .settings-close {
+  color: #666;
+}
+
+#app.dark .settings-close:hover {
+  color: #999;
+}
+
+#app.dark .setting-label {
+  color: #999;
+}
+
+#app.dark .setting-select {
+  background: #1e1e1e;
+  border-color: #444;
+  color: #ddd;
+}
+
+#app.dark .setting-select:focus {
+  border-color: #4a90e2;
 }
 
 /* 加载更多按钮 */

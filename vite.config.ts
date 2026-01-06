@@ -12,6 +12,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    sourcemap: true, // 启用 sourcemap 用于调试
     rollupOptions: {
       input: {
         viewer: resolve(__dirname, 'index.html'),

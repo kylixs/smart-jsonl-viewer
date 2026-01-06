@@ -31,7 +31,10 @@
     <!-- 基本类型：字符串、数字、布尔值、null -->
     <div v-if="!isObject && !isArray" class="json-node primitive" :style="{ paddingLeft: `${depth * 32}px` }">
       <span v-if="nodeKey" class="key">{{ nodeKey }}:</span>
-      <StringDecoder :value="data" :node-key="nodeKey" />
+      <!-- 只有需要解码的字符串才使用 StringDecoder 组件 -->
+      <StringDecoder v-if="needsDecoder" :value="data" :node-key="nodeKey" />
+      <!-- 其他类型直接显示 -->
+      <span v-else :class="`value-${valueType}`">{{ displayValue }}</span>
     </div>
   </div>
 </template>
@@ -39,6 +42,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import StringDecoder from './StringDecoder.vue'
+import { isDecodable } from '../utils/decoder'
 
 interface Props {
   data: any
@@ -105,6 +109,29 @@ const children = computed(() => {
   return []
 })
 
+// 是否需要 StringDecoder 组件（仅对可解码的字符串使用）
+const needsDecoder = computed(() => {
+  return isDecodable(props.data)
+})
+
+// 值类型（用于不需要解码的值）
+const valueType = computed(() => {
+  if (props.data === null) return 'null'
+  if (typeof props.data === 'boolean') return 'boolean'
+  if (typeof props.data === 'number') return 'number'
+  if (typeof props.data === 'string') return 'string'
+  return 'unknown'
+})
+
+// 显示值（用于不需要解码的值）
+const displayValue = computed(() => {
+  if (props.data === null) return 'null'
+  if (typeof props.data === 'boolean') return String(props.data)
+  if (typeof props.data === 'number') return String(props.data)
+  if (typeof props.data === 'string') return `"${props.data}"`
+  return String(props.data)
+})
+
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
 }
@@ -160,6 +187,27 @@ function toggleExpand() {
   margin: 0 4px;
 }
 
+/* 基本类型值样式 */
+.value-string {
+  color: #ce9178;
+}
+
+.value-number {
+  color: #b5cea8;
+}
+
+.value-boolean {
+  color: #569cd6;
+}
+
+.value-null {
+  color: #569cd6;
+}
+
+.value-unknown {
+  color: #d4d4d4;
+}
+
 /* 暗色主题 */
 :root.dark .toggle-icon {
   color: #999;
@@ -183,5 +231,25 @@ function toggleExpand() {
 
 :root.dark .json-node.closing-bracket {
   color: #666;
+}
+
+:root.dark .value-string {
+  color: #ce9178;
+}
+
+:root.dark .value-number {
+  color: #b5cea8;
+}
+
+:root.dark .value-boolean {
+  color: #569cd6;
+}
+
+:root.dark .value-null {
+  color: #569cd6;
+}
+
+:root.dark .value-unknown {
+  color: #d4d4d4;
 }
 </style>

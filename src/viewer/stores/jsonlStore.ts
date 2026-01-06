@@ -31,6 +31,8 @@ interface JsonlState {
   expandDepth: number
   // 最大显示行数（-1 = 不限制，其他正整数 = 限制显示行数）
   maxDisplayLines: number
+  // JSON 缩进字符数
+  indentSize: number
   // 当前可见行数（用于分页加载优化）
   visibleCount: number
   // 每次加载的批次大小
@@ -45,6 +47,17 @@ interface JsonlState {
   isRendering: boolean
   // 已渲染行数
   renderedCount: number
+  // 渲染防抖定时器
+  renderDebounceTimer: number | undefined
+  // 上次过滤使用的参数（用于避免重复过滤）
+  lastFilterParams: {
+    keyword: string
+    filterMode: FilterMode
+    searchMode: SearchMode
+    searchDecoded: boolean
+  } | null
+  // 当前渲染任务ID（用于取消旧的渲染任务）
+  currentRenderTaskId: number
 }
 
 export const useJsonlStore = defineStore('jsonl', {
@@ -61,6 +74,7 @@ export const useJsonlStore = defineStore('jsonl', {
     globalExpanded: true,
     expandDepth: -1,
     maxDisplayLines: 10,
+    indentSize: 2,
     visibleCount: 100, // 初始显示 100 行
     batchSize: 50, // 每次加载 50 行
     isBackgroundLoading: false,
@@ -68,6 +82,9 @@ export const useJsonlStore = defineStore('jsonl', {
     totalCount: 0,
     isRendering: false,
     renderedCount: 0,
+    renderDebounceTimer: undefined,
+    lastFilterParams: null,
+    currentRenderTaskId: 0,
   }),
 
   getters: {
@@ -114,6 +131,7 @@ export const useJsonlStore = defineStore('jsonl', {
       this.totalCount = estimatedLines
       this.loadedCount = 0
       this.isBackgroundLoading = true
+      this.lastFilterParams = null // 重置过滤参数，确保新数据会触发过滤
 
       // 使用增量解析，处理进度回调
       const parseStartTime = performance.now()
@@ -134,29 +152,29 @@ export const useJsonlStore = defineStore('jsonl', {
         const updateTime = performance.now() - updateStartTime
         console.log(`[${new Date().toISOString()}] allLines 更新完成, 耗时 ${updateTime.toFixed(2)}ms`)
 
-        const filterStartTime = performance.now()
-        // 后台加载时不重置 visibleCount，避免页面闪烁
-        this.applyFilter(false)
-        const filterTime = performance.now() - filterStartTime
-        console.log(`[${new Date().toISOString()}] applyFilter 完成, 耗时 ${filterTime.toFixed(2)}ms`)
-
         // 加载完成
         if (isComplete) {
+          const filterStartTime = performance.now()
+          // 后台加载完成时才执行过滤，避免加载期间重复过滤
+          const filtered = this.applyFilter(false)
+          const filterTime = performance.now() - filterStartTime
+          console.log(`[${new Date().toISOString()}] applyFilter 完成, 耗时 ${filterTime.toFixed(2)}ms`)
+
           this.isBackgroundLoading = false
           this.loadedCount = this.totalCount
 
-          // 使用渐进式渲染显示所有已加载的数据
-          console.log(`[${new Date().toISOString()}] 后台加载完成，启动渐进式渲染`)
-          const renderStartTime = performance.now()
-          this.progressiveRender(this.filteredLines.length)
-          const renderTime = performance.now() - renderStartTime
-          console.log(`[${new Date().toISOString()}] 渐进式渲染启动, 耗时 ${renderTime.toFixed(2)}ms`)
+          // 只有真正执行了过滤才调度渲染
+          if (filtered) {
+            console.log(`[${new Date().toISOString()}] 后台加载完成，调度渲染`)
+            this.scheduleRender()
+          }
 
           const callbackTime = performance.now() - callbackStartTime
           console.log(`[${new Date().toISOString()}] ===== 后台加载完成 ===== 回调总耗时 ${callbackTime.toFixed(2)}ms`)
         } else {
+          // 后台加载中，只更新数据不过滤（避免重复过滤）
           const callbackTime = performance.now() - callbackStartTime
-          console.log(`[${new Date().toISOString()}] 进度回调完成, 耗时 ${callbackTime.toFixed(2)}ms`)
+          console.log(`[${new Date().toISOString()}] 后台加载中, 耗时 ${callbackTime.toFixed(2)}ms`)
         }
       })
 
@@ -196,12 +214,24 @@ export const useJsonlStore = defineStore('jsonl', {
      * 加载 JSON Lines
      */
     loadJsonLines(lines: JsonLineNode[]) {
+      console.log(`[${new Date().toISOString()}] ===== 加载新数据，清理旧数据 =====`)
+
+      // 取消当前渲染任务
+      this.currentRenderTaskId++
+
+      // 清空旧数据（帮助垃圾回收）
+      this.allLines = []
+      this.filteredLines = []
+
+      // 加载新数据
       this.allLines = lines
       this.fileType = 'jsonl'
+
       // 默认全部展开
       this.allLines.forEach((line) => {
         line.isExpanded = true
       })
+
       this.applyFilter()
     },
 
@@ -216,16 +246,14 @@ export const useJsonlStore = defineStore('jsonl', {
       this.searchKeyword = keyword
 
       const filterStartTime = performance.now()
-      this.applyFilter()
+      // 不重置 visibleCount，让 scheduleRender 控制渲染
+      const filtered = this.applyFilter(false)
       const filterTime = performance.now() - filterStartTime
       console.log(`[${new Date().toISOString()}] applyFilter 完成: ${this.filteredLines.length} 行, 耗时 ${filterTime.toFixed(2)}ms`)
 
-      // 如果有搜索关键字，使用渐进式渲染
-      if (keyword.trim()) {
-        const renderStartTime = performance.now()
-        this.progressiveRender(this.filteredLines.length)
-        const renderTime = performance.now() - renderStartTime
-        console.log(`[${new Date().toISOString()}] 渐进式渲染启动, 耗时 ${renderTime.toFixed(2)}ms`)
+      // 只有真正执行了过滤才调度渲染
+      if (filtered) {
+        this.scheduleRender()
       }
 
       const funcTime = performance.now() - funcStartTime
@@ -237,10 +265,11 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setFilterMode(mode: FilterMode) {
       this.filterMode = mode
-      this.applyFilter()
-      // 如果有搜索关键字，使用渐进式渲染
-      if (this.searchKeyword.trim()) {
-        this.progressiveRender(this.filteredLines.length)
+      // 不重置 visibleCount，让 scheduleRender 控制渲染
+      const filtered = this.applyFilter(false)
+      // 只有真正执行了过滤才调度渲染
+      if (filtered) {
+        this.scheduleRender()
       }
     },
 
@@ -249,10 +278,11 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setSearchMode(mode: SearchMode) {
       this.searchMode = mode
-      this.applyFilter()
-      // 如果有搜索关键字，使用渐进式渲染
-      if (this.searchKeyword.trim()) {
-        this.progressiveRender(this.filteredLines.length)
+      // 不重置 visibleCount，让 scheduleRender 控制渲染
+      const filtered = this.applyFilter(false)
+      // 只有真正执行了过滤才调度渲染
+      if (filtered) {
+        this.scheduleRender()
       }
     },
 
@@ -261,21 +291,52 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     toggleSearchDecoded() {
       this.searchDecoded = !this.searchDecoded
-      this.applyFilter()
-      // 如果有搜索关键字，使用渐进式渲染
-      if (this.searchKeyword.trim()) {
-        this.progressiveRender(this.filteredLines.length)
+      // 不重置 visibleCount，让 scheduleRender 控制渲染
+      const filtered = this.applyFilter(false)
+      // 只有真正执行了过滤才调度渲染
+      if (filtered) {
+        this.scheduleRender()
       }
     },
 
     /**
      * 应用过滤
+     * @returns {boolean} 是否真的执行了过滤（false表示跳过）
      */
-    applyFilter(resetVisible: boolean = true) {
+    applyFilter(resetVisible: boolean = true): boolean {
       const funcStartTime = performance.now()
       const hasSearch = !!this.searchKeyword.trim()
 
+      // 构建当前过滤参数
+      const currentParams = {
+        keyword: this.searchKeyword.trim(),
+        filterMode: this.filterMode,
+        searchMode: this.searchMode,
+        searchDecoded: this.searchDecoded
+      }
+
+      // 检查参数是否与上次相同，如果相同则跳过过滤
+      if (this.lastFilterParams &&
+          this.lastFilterParams.keyword === currentParams.keyword &&
+          this.lastFilterParams.filterMode === currentParams.filterMode &&
+          this.lastFilterParams.searchMode === currentParams.searchMode &&
+          this.lastFilterParams.searchDecoded === currentParams.searchDecoded) {
+        console.log(`[${new Date().toISOString()}] applyFilter 跳过: 过滤参数未改变`)
+        return false // 跳过过滤
+      }
+
+      // 优化：当上次和本次关键字都为空时，修改其他参数不需要重新过滤
+      if (!hasSearch && this.lastFilterParams && !this.lastFilterParams.keyword) {
+        console.log(`[${new Date().toISOString()}] applyFilter 跳过: 关键字为空，其他参数变化不影响结果`)
+        // 更新参数记录，但不重新过滤
+        this.lastFilterParams = currentParams
+        return false
+      }
+
       console.log(`[${new Date().toISOString()}] applyFilter 开始: hasSearch=${hasSearch}, allLines=${this.allLines.length}`)
+
+      // 清空旧的 filteredLines，帮助垃圾回收
+      this.filteredLines = []
 
       if (!hasSearch) {
         this.filteredLines = this.allLines
@@ -293,6 +354,9 @@ export const useJsonlStore = defineStore('jsonl', {
         console.log(`[${new Date().toISOString()}] filterJsonLines 完成: ${this.filteredLines.length}/${this.allLines.length} 行匹配, 耗时 ${filterTime.toFixed(2)}ms`)
       }
 
+      // 记录本次过滤参数
+      this.lastFilterParams = currentParams
+
       // 重置可见行数（避免渲染过多行）
       if (resetVisible) {
         this.resetVisibleCount()
@@ -300,6 +364,7 @@ export const useJsonlStore = defineStore('jsonl', {
 
       const funcTime = performance.now() - funcStartTime
       console.log(`[${new Date().toISOString()}] applyFilter 完成, 总耗时 ${funcTime.toFixed(2)}ms`)
+      return true // 执行了过滤
     },
 
     /**
@@ -437,6 +502,7 @@ export const useJsonlStore = defineStore('jsonl', {
       this.filteredLines = []
       this.searchKeyword = ''
       this.fileType = null
+      this.lastFilterParams = null // 重置过滤参数
     },
 
     /**
@@ -468,12 +534,39 @@ export const useJsonlStore = defineStore('jsonl', {
     },
 
     /**
+     * 调度渲染（带防抖，避免短时间内重复渲染）
+     */
+    scheduleRender() {
+      console.log(`[${new Date().toISOString()}] scheduleRender 被调用`)
+
+      // 清除之前的定时器
+      if (this.renderDebounceTimer) {
+        clearTimeout(this.renderDebounceTimer)
+        console.log(`[${new Date().toISOString()}] 清除之前的渲染定时器`)
+      }
+
+      // 10ms 防抖（过滤已经很快，减少延迟）
+      this.renderDebounceTimer = window.setTimeout(() => {
+        console.log(`[${new Date().toISOString()}] 防抖触发，开始渐进式渲染`)
+        this.renderDebounceTimer = undefined
+
+        // 任何时候都渐进式渲染全部结果
+        this.progressiveRender(this.filteredLines.length)
+      }, 10)
+    },
+
+    /**
      * 渐进式渲染：首批快速显示，后台异步渲染剩余行
      */
     progressiveRender(targetCount: number) {
       const funcStartTime = performance.now()
       console.log(`[${new Date().toISOString()}] ===== progressiveRender 开始 =====`)
       console.log(`[${new Date().toISOString()}] 目标渲染: ${targetCount} 行`)
+
+      // 递增任务ID，取消之前的渲染任务
+      this.currentRenderTaskId++
+      const taskId = this.currentRenderTaskId
+      console.log(`[${new Date().toISOString()}] 渲染任务ID: ${taskId}`)
 
       // 首批渲染：立即显示前 500 行（或更少）
       const initialBatch = Math.min(500, targetCount)
@@ -490,8 +583,14 @@ export const useJsonlStore = defineStore('jsonl', {
         const backgroundStartTime = performance.now()
 
         const renderNextBatch = (currentIndex: number) => {
+          // 检查任务是否已被取消
+          if (this.currentRenderTaskId !== taskId) {
+            console.log(`[${new Date().toISOString()}] 渲染任务 ${taskId} 已取消，停止渲染`)
+            return
+          }
+
           const batchStartTime = performance.now()
-          const batchSize = 500 // 每批渲染 500 行
+          const batchSize = 200 // 每批渲染 200 行
           const endIndex = Math.min(currentIndex + batchSize, targetCount)
 
           console.log(`[${new Date().toISOString()}] 后台渲染批次: ${currentIndex}-${endIndex}`)
@@ -536,6 +635,37 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     resetVisibleCount() {
       this.visibleCount = 100
+    },
+
+    /**
+     * 清理所有数据，释放内存
+     * 在页面卸载或重新加载文件时调用
+     */
+    cleanup() {
+      console.log(`[${new Date().toISOString()}] ===== 清理 Store 数据，释放内存 =====`)
+
+      // 取消当前渲染任务
+      this.currentRenderTaskId++
+
+      // 清空所有数据数组
+      this.allLines = []
+      this.filteredLines = []
+
+      // 重置计数器
+      this.visibleCount = 100
+      this.renderedCount = 0
+      this.loadedCount = 0
+      this.totalCount = 0
+
+      // 重置搜索相关
+      this.searchKeyword = ''
+      this.lastFilterParams = null
+
+      // 重置状态
+      this.isRendering = false
+      this.isBackgroundLoading = false
+
+      console.log(`[${new Date().toISOString()}] Store 数据清理完成`)
     }
   }
 })

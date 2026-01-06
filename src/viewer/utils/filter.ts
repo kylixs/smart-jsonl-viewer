@@ -1,6 +1,26 @@
 import type { JsonLineNode, FilterMode, SearchMode } from './types'
 import { unescapeString } from './decoder'
 
+// 缓存正则表达式，避免重复创建
+const regexCache = new Map<string, RegExp>()
+
+function getCachedRegex(keyword: string): RegExp {
+  const cacheKey = `exact_${keyword}`
+  let regex = regexCache.get(cacheKey)
+  if (!regex) {
+    regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'i')
+    regexCache.set(cacheKey, regex)
+    // 限制缓存大小
+    if (regexCache.size > 100) {
+      const firstKey = regexCache.keys().next().value
+      if (firstKey) {
+        regexCache.delete(firstKey)
+      }
+    }
+  }
+  return regex
+}
+
 /**
  * 过滤 JSON Lines
  */
@@ -26,7 +46,7 @@ export function filterJsonLines(
 
   if (mode === 'line') {
     return lines.filter((line) =>
-      matchInLine(line, processedKeyword, searchMode, searchDecoded)
+      matchInLine(line, processedKeyword, searchMode)
     )
   } else {
     // 节点模式：只显示包含关键字的叶子节点及其路径
@@ -51,25 +71,15 @@ export function filterJsonLines(
 }
 
 /**
- * 检查一行是否包含关键字
+ * 检查一行是否包含关键字（优化版本：只搜索原始内容）
  */
 function matchInLine(
   line: JsonLineNode,
   keyword: string,
-  searchMode: SearchMode,
-  searchDecoded: boolean
+  searchMode: SearchMode
 ): boolean {
-  // 搜索原始内容
-  if (matchString(line.rawContent.toLowerCase(), keyword, searchMode)) {
-    return true
-  }
-
-  // 搜索解码后的内容
-  if (searchDecoded) {
-    return searchInObject(line.parsedData, keyword, searchMode, searchDecoded)
-  }
-
-  return false
+  // 只搜索原始内容（已经是字符串形式，不需要递归）
+  return matchString(line.rawContent.toLowerCase(), keyword, searchMode)
 }
 
 /**
@@ -82,9 +92,8 @@ function matchString(text: string, keyword: string, searchMode: SearchMode): boo
       return text.includes(keyword)
 
     case 'exact':
-      // 完全匹配：完整单词匹配
-      const regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'i')
-      return regex.test(text)
+      // 完全匹配：完整单词匹配，使用缓存的正则
+      return getCachedRegex(keyword).test(text)
 
     default:
       return text.includes(keyword)
@@ -92,7 +101,7 @@ function matchString(text: string, keyword: string, searchMode: SearchMode): boo
 }
 
 /**
- * 在对象中递归搜索关键字
+ * 在对象中递归搜索关键字（优化版本）
  */
 function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuzzy', searchDecoded: boolean = true): boolean {
   if (obj === null || obj === undefined) {
@@ -107,27 +116,40 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
     }
 
     // 如果是字符串，且开启了解码搜索，尝试解码后再搜索
-    if (typeof obj === 'string' && searchDecoded) {
-      const unescaped = unescapeString(obj).toLowerCase()
-      if (matchString(unescaped, keyword, searchMode)) {
-        return true
-      }
+    if (typeof obj === 'string' && searchDecoded && obj.length > 0) {
+      // 优化：只对包含转义字符或看起来像 JSON 的字符串进行解码/解析
+      const needsDecode = obj.includes('\\') || obj.includes('"')
 
-      // 尝试解析为 JSON 后再搜索
-      try {
-        const parsed = JSON.parse(obj)
-        if (searchInObject(parsed, keyword, searchMode, searchDecoded)) {
-          return true
+      if (needsDecode) {
+        // 尝试解码
+        try {
+          const unescaped = unescapeString(obj).toLowerCase()
+          if (unescaped !== str && matchString(unescaped, keyword, searchMode)) {
+            return true
+          }
+        } catch {
+          // 解码失败，跳过
         }
-      } catch {
-        // 不是有效的 JSON，跳过
+
+        // 只对看起来像 JSON 的字符串尝试解析（以 { 或 [ 开头）
+        const trimmed = obj.trim()
+        if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && trimmed.length < 10000) {
+          try {
+            const parsed = JSON.parse(obj)
+            if (searchInObject(parsed, keyword, searchMode, searchDecoded)) {
+              return true
+            }
+          } catch {
+            // 不是有效的 JSON，跳过
+          }
+        }
       }
     }
 
     return false
   }
 
-  // 递归搜索数组
+  // ��归搜索数组
   if (Array.isArray(obj)) {
     return obj.some((item) => searchInObject(item, keyword, searchMode, searchDecoded))
   }

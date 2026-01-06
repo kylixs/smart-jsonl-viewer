@@ -133,19 +133,6 @@
           <option :value="5">展开5层</option>
         </select>
       </div>
-
-      <div class="depth-control">
-        <label class="depth-label">显示行数:</label>
-        <select v-model="selectedMaxLines" @change="handleMaxLinesChange" class="depth-select">
-          <option :value="-1">不限制</option>
-          <option :value="5">5行</option>
-          <option :value="10">10行</option>
-          <option :value="20">20行</option>
-          <option :value="30">30行</option>
-          <option :value="50">50行</option>
-          <option :value="100">100行</option>
-        </select>
-      </div>
     </div>
 
     <div v-if="searchMode === 'jsonpath'" class="jsonpath-hint">
@@ -166,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import type { FilterMode, SearchMode } from '../utils/types'
 import { useJsonlStore } from '../stores/jsonlStore'
 import {
@@ -184,14 +171,8 @@ const mode = ref<FilterMode>('line')
 const searchMode = ref<SearchMode>('fuzzy')
 const searchDecoded = ref(true)
 const selectedDepth = ref(-1)
-const selectedMaxLines = ref(10)
 const showHistoryDropdown = ref(false)
 const selectedHistoryIndex = ref(-1)
-
-// 智能保存搜索历史相关
-const pendingSearchKeyword = ref('') // 待保存的搜索词
-const searchSaveTimer = ref<number>() // 3秒定时器
-const initialScrollTop = ref(0) // 记录搜索时的滚动位置
 const historyVersion = ref(0) // 用于触发历史列表更新
 
 // 搜索防抖定时器
@@ -230,70 +211,12 @@ onMounted(() => {
   searchMode.value = store.searchMode
   searchDecoded.value = store.searchDecoded
   selectedDepth.value = store.expandDepth
-  selectedMaxLines.value = store.maxDisplayLines
-
-  // 监听页面滚动事件
-  setupScrollListener()
-})
-
-// 组件卸载时清理
-onUnmounted(() => {
-  clearSearchSaveTimer()
-  cleanupScrollListener()
 })
 
 // 监听搜索模式变化，重置历史下拉状态
 watch(searchMode, () => {
   selectedHistoryIndex.value = -1
 })
-
-// 设置滚动监听
-function setupScrollListener() {
-  const resultContainer = document.querySelector('.json-viewer')
-  if (resultContainer) {
-    resultContainer.addEventListener('scroll', handleScroll)
-  }
-}
-
-// 清理滚动监听
-function cleanupScrollListener() {
-  const resultContainer = document.querySelector('.json-viewer')
-  if (resultContainer) {
-    resultContainer.removeEventListener('scroll', handleScroll)
-  }
-}
-
-// 处理滚动事件
-function handleScroll(event: Event) {
-  if (!pendingSearchKeyword.value) return
-
-  const target = event.target as HTMLElement
-  const scrolled = Math.abs(target.scrollTop - initialScrollTop.value)
-  const lineHeight = 24 // 假设每行约 24px
-
-  // 滚动超过 10 行，认为用户在查看结果
-  if (scrolled > lineHeight * 10) {
-    savePendingSearch()
-  }
-}
-
-// 保存待保存的搜索
-function savePendingSearch() {
-  if (pendingSearchKeyword.value) {
-    addSearchHistory(pendingSearchKeyword.value, searchMode.value, mode.value)
-    pendingSearchKeyword.value = ''
-    clearSearchSaveTimer()
-    historyVersion.value++ // 触发历史列表更新
-  }
-}
-
-// 清除定时器
-function clearSearchSaveTimer() {
-  if (searchSaveTimer.value) {
-    clearTimeout(searchSaveTimer.value)
-    searchSaveTimer.value = undefined
-  }
-}
 
 function handleSearch() {
   const inputStartTime = performance.now()
@@ -314,9 +237,6 @@ function handleSearch() {
     store.setSearchKeyword('')
     const searchTime = performance.now() - searchStartTime
     console.log(`[${new Date().toISOString()}] 搜索完成, 耗时 ${searchTime.toFixed(2)}ms`)
-
-    pendingSearchKeyword.value = ''
-    clearSearchSaveTimer()
     return
   }
 
@@ -332,25 +252,6 @@ function handleSearch() {
     const searchTime = performance.now() - searchStartTime
     console.log(`[${new Date().toISOString()}] store.setSearchKeyword 完成, 耗时 ${searchTime.toFixed(2)}ms`)
 
-    // 设置待保存的搜索词
-    if (trimmedKeyword !== pendingSearchKeyword.value) {
-      pendingSearchKeyword.value = trimmedKeyword
-
-      // 记录当前滚动位置
-      const resultContainer = document.querySelector('.json-viewer')
-      if (resultContainer) {
-        initialScrollTop.value = resultContainer.scrollTop
-      }
-
-      // 清除之前的定时器
-      clearSearchSaveTimer()
-
-      // 3秒后自动保存
-      searchSaveTimer.value = window.setTimeout(() => {
-        savePendingSearch()
-      }, 3000)
-    }
-
     const totalDebounceTime = performance.now() - debounceStartTime
     console.log(`[${new Date().toISOString()}] ===== 搜索流程完成 ===== 总耗时 ${totalDebounceTime.toFixed(2)}ms`)
   }, 500)
@@ -360,9 +261,11 @@ function handleSearch() {
 }
 
 function handleInputBlur() {
-  // 失去焦点时，如果有待保存的搜索，保存它
-  if (pendingSearchKeyword.value) {
-    savePendingSearch()
+  // 失去焦点时，保存当前有效的搜索词到历史
+  const trimmedKeyword = keyword.value.trim()
+  if (trimmedKeyword) {
+    addSearchHistory(trimmedKeyword, searchMode.value, mode.value)
+    historyVersion.value++ // 触发历史列表更新
   }
 
   // 延迟关闭，以便点击事件能够触发
@@ -423,7 +326,6 @@ function toggleHistoryDropdown() {
   showHistoryDropdown.value = !showHistoryDropdown.value
 }
 
-
 function handleModeChange() {
   store.setFilterMode(mode.value)
 }
@@ -443,10 +345,6 @@ function clearSearch() {
 
 function handleDepthChange() {
   store.setExpandDepth(selectedDepth.value)
-}
-
-function handleMaxLinesChange() {
-  store.setMaxDisplayLines(selectedMaxLines.value)
 }
 
 function fillExample(example: string) {
@@ -707,7 +605,6 @@ function fillExample(example: string) {
 }
 
 .depth-control {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;

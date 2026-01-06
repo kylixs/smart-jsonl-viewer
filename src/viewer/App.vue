@@ -144,11 +144,11 @@
       </button>
     </div>
 
-    <!-- 后台加载进度条（底部悬浮，半透明） -->
-    <div v-if="store.isBackgroundLoading" class="loading-progress">
+    <!-- 后台加载/渲染进度条（底部悬浮，半透明） -->
+    <div v-if="store.isBackgroundLoading || store.isRendering" class="loading-progress">
       <div class="loading-progress-content">
-        <span class="loading-progress-text">正在加载...</span>
-        <span class="loading-progress-count">{{ store.loadedCount }} / {{ store.totalCount }} 行</span>
+        <span class="loading-progress-text">{{ progressText }}</span>
+        <span class="loading-progress-count">{{ progressCount }}</span>
         <div class="loading-progress-bar">
           <div class="loading-progress-fill" :style="{ width: progressPercentage + '%' }"></div>
         </div>
@@ -187,10 +187,34 @@ const themeTitle = computed(() => {
   return store.isDark ? '切换到亮色主题' : '切换到暗色主题'
 })
 
-// 后台加载进度百分比
+// 进度相关计算属性
+const progressText = computed(() => {
+  if (store.isBackgroundLoading) {
+    return '正在加载...'
+  } else if (store.isRendering) {
+    return '正在渲染...'
+  }
+  return ''
+})
+
+const progressCount = computed(() => {
+  if (store.isBackgroundLoading) {
+    return `${store.loadedCount} / ${store.totalCount} 行`
+  } else if (store.isRendering) {
+    return `${store.renderedCount} / ${store.filteredCount} 行`
+  }
+  return ''
+})
+
 const progressPercentage = computed(() => {
-  if (store.totalCount === 0) return 0
-  return Math.floor((store.loadedCount / store.totalCount) * 100)
+  if (store.isBackgroundLoading) {
+    if (store.totalCount === 0) return 0
+    return Math.floor((store.loadedCount / store.totalCount) * 100)
+  } else if (store.isRendering) {
+    if (store.filteredCount === 0) return 0
+    return Math.floor((store.renderedCount / store.filteredCount) * 100)
+  }
+  return 0
 })
 
 // 检测是否为自动加载模式（来自页面拦截）

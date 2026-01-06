@@ -194,6 +194,9 @@ const searchSaveTimer = ref<number>() // 3秒定时器
 const initialScrollTop = ref(0) // 记录搜索时的滚动位置
 const historyVersion = ref(0) // 用于触发历史列表更新
 
+// 搜索防抖定时器
+const searchDebounceTimer = ref<number>()
+
 // 获取所有搜索历史（不再按模式过滤）
 const searchHistory = computed<SearchHistoryItem[]>(() => {
   // 访问 historyVersion 以建立响应式依赖
@@ -293,31 +296,67 @@ function clearSearchSaveTimer() {
 }
 
 function handleSearch() {
+  const inputStartTime = performance.now()
+  console.log(`[${new Date().toISOString()}] ===== handleSearch 触发 =====`)
+  console.log(`[${new Date().toISOString()}] 当前输入: "${keyword.value}"`)
+
+  // 清除之前的防抖定时器
+  if (searchDebounceTimer.value) {
+    clearTimeout(searchDebounceTimer.value)
+  }
+
   const trimmedKeyword = keyword.value.trim()
-  store.setSearchKeyword(trimmedKeyword)
 
-  // 设置待保存的搜索词
-  if (trimmedKeyword && trimmedKeyword !== pendingSearchKeyword.value) {
-    pendingSearchKeyword.value = trimmedKeyword
+  // 如果是清空搜索，立即执行
+  if (!trimmedKeyword) {
+    console.log(`[${new Date().toISOString()}] 清空搜索，立即执行`)
+    const searchStartTime = performance.now()
+    store.setSearchKeyword('')
+    const searchTime = performance.now() - searchStartTime
+    console.log(`[${new Date().toISOString()}] 搜索完成, 耗时 ${searchTime.toFixed(2)}ms`)
 
-    // 记录当前滚动位置
-    const resultContainer = document.querySelector('.json-viewer')
-    if (resultContainer) {
-      initialScrollTop.value = resultContainer.scrollTop
-    }
-
-    // 清除之前的定时器
-    clearSearchSaveTimer()
-
-    // 3秒后自动保存
-    searchSaveTimer.value = window.setTimeout(() => {
-      savePendingSearch()
-    }, 3000)
-  } else if (!trimmedKeyword) {
-    // 清空搜索时，取消待保存状态
     pendingSearchKeyword.value = ''
     clearSearchSaveTimer()
+    return
   }
+
+  // 有内容时使用防抖，500ms 后执行
+  console.log(`[${new Date().toISOString()}] 设置防抖定时器 (500ms)`)
+  searchDebounceTimer.value = window.setTimeout(() => {
+    const debounceStartTime = performance.now()
+    console.log(`[${new Date().toISOString()}] ===== 防抖触发，开始搜索 =====`)
+    console.log(`[${new Date().toISOString()}] 搜索关键字: "${trimmedKeyword}"`)
+
+    const searchStartTime = performance.now()
+    store.setSearchKeyword(trimmedKeyword)
+    const searchTime = performance.now() - searchStartTime
+    console.log(`[${new Date().toISOString()}] store.setSearchKeyword 完成, 耗时 ${searchTime.toFixed(2)}ms`)
+
+    // 设置待保存的搜索词
+    if (trimmedKeyword !== pendingSearchKeyword.value) {
+      pendingSearchKeyword.value = trimmedKeyword
+
+      // 记录当前滚动位置
+      const resultContainer = document.querySelector('.json-viewer')
+      if (resultContainer) {
+        initialScrollTop.value = resultContainer.scrollTop
+      }
+
+      // 清除之前的定时器
+      clearSearchSaveTimer()
+
+      // 3秒后自动保存
+      searchSaveTimer.value = window.setTimeout(() => {
+        savePendingSearch()
+      }, 3000)
+    }
+
+    const totalDebounceTime = performance.now() - debounceStartTime
+    console.log(`[${new Date().toISOString()}] ===== 搜索流程完成 ===== 总耗时 ${totalDebounceTime.toFixed(2)}ms`)
+  }, 500)
+
+  const inputTime = performance.now() - inputStartTime
+  console.log(`[${new Date().toISOString()}] handleSearch 完成, 耗时 ${inputTime.toFixed(2)}ms`)
 }
 
 function handleInputBlur() {

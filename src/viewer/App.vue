@@ -1,7 +1,13 @@
 <template>
-  <div id="app" :class="{ dark: store.isDark }">
+  <div id="app" :class="{ dark: store.isDark }"
+       @drop.prevent="handleGlobalDrop"
+       @dragover.prevent="handleGlobalDragOver"
+       @dragleave="handleGlobalDragLeave">
     <header class="app-header">
-      <h1 class="app-title">JSONL Viewer</h1>
+      <div class="app-title-section">
+        <h1 class="app-title">JSONL Viewer</h1>
+        <span v-if="currentFileName" class="current-file-name">{{ currentFileName }}</span>
+      </div>
       <div class="app-actions">
         <button class="action-btn" @click="goToHome" title="返回首页" v-if="store.totalLines > 0">
           🏠
@@ -135,6 +141,15 @@
         </div>
       </div>
 
+      <!-- 拖拽覆盖层（列表页面） -->
+      <div v-if="isDragging && store.totalLines > 0" class="drag-overlay-global">
+        <div class="drag-overlay-content">
+          <div class="drag-overlay-icon">📁</div>
+          <h2>拖拽文件到此处</h2>
+          <p>将加载新文件</p>
+        </div>
+      </div>
+
       <!-- JSON Lines 显示区域 -->
       <div v-else class="jsonl-content">
         <div v-if="store.filteredCount === 0 && store.hasSearch" class="no-results">
@@ -210,6 +225,10 @@ const showSettingsPanel = ref(false)
 const selectedMaxLines = ref(10)
 const selectedIndentSize = ref(2)
 
+// 当前文件信息
+const currentFileName = ref('')
+const currentFileSize = ref(0)
+
 // 自动加载模式（从 URL 参数判断是否来自页面拦截）
 const isAutoLoad = ref(false)
 // 加载中状态
@@ -280,6 +299,18 @@ onMounted(() => {
   // 应用设置到 store
   store.setMaxDisplayLines(settings.maxDisplayLines)
 
+  // 从 URL 参数恢复文件名显示
+  const urlParams = new URLSearchParams(window.location.search)
+  const fileName = urlParams.get('file')
+  const fileSize = urlParams.get('size')
+  if (fileName) {
+    currentFileName.value = fileName
+    if (fileSize) {
+      currentFileSize.value = parseInt(fileSize)
+    }
+    document.title = `${fileName} - JSONL Viewer`
+  }
+
   // 监听来自 content script 的消息
   window.addEventListener('message', handleMessage)
 
@@ -342,6 +373,31 @@ function handleFileSelect(event: Event) {
   }
 }
 
+// 全局拖拽处理（列表页面也可拖拽文件）
+function handleGlobalDragOver(event: DragEvent) {
+  // 只在有文件被拖拽时才处理
+  if (event.dataTransfer?.types.includes('Files')) {
+    isDragging.value = true
+  }
+}
+
+function handleGlobalDragLeave(event: DragEvent) {
+  // 检查是否真的离开了 app 区域
+  const target = event.target as HTMLElement
+  if (target.id === 'app') {
+    isDragging.value = false
+  }
+}
+
+function handleGlobalDrop(event: DragEvent) {
+  isDragging.value = false
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    // 直接加载文件，不需要确认
+    loadFile(files[0])
+  }
+}
+
 async function loadFile(file: File) {
   const funcStartTime = performance.now()
   console.log(`[${new Date().toISOString()}] ########## loadFile 开始 ##########`)
@@ -358,6 +414,18 @@ async function loadFile(file: File) {
     store.loadText(text)
     const loadTime = performance.now() - loadStartTime
     console.log(`[${new Date().toISOString()}] store.loadText 完成, 耗时 ${loadTime.toFixed(2)}ms`)
+
+    // 更新 URL 显示文件名（方便浏览器历史记录）
+    const newUrl = new URL(window.location.href)
+    newUrl.searchParams.set('file', file.name)
+    newUrl.searchParams.set('size', file.size.toString())
+    window.history.pushState({ file: file.name, size: file.size }, '', newUrl.toString())
+    console.log(`[${new Date().toISOString()}] URL 已更新: ${newUrl.toString()}`)
+
+    // 更新页面标题和当前文件信息
+    currentFileName.value = file.name
+    currentFileSize.value = file.size
+    document.title = `${file.name} - JSONL Viewer`
 
     const funcTime = performance.now() - funcStartTime
     console.log(`[${new Date().toISOString()}] ########## loadFile 完成 ########## 总耗时 ${funcTime.toFixed(2)}ms`)
@@ -608,9 +676,28 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.app-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .app-title {
   font-size: 24px;
   font-weight: 600;
+}
+
+.current-file-name {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .app-actions {
@@ -1591,5 +1678,74 @@ body {
     transform: translateY(0);
     opacity: 1;
   }
+}
+/* 全局拖拽覆盖层（列表页面） */
+.drag-overlay-global {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.drag-overlay-content {
+  text-align: center;
+  padding: 60px;
+  border: 3px dashed var(--theme-primary);
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.drag-overlay-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 0.6s ease-in-out;
+}
+
+.drag-overlay-content h2 {
+  font-size: 28px;
+  margin-bottom: 12px;
+  color: #333;
+  font-weight: 600;
+}
+
+.drag-overlay-content p {
+  font-size: 16px;
+  color: #666;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* 暗色主题 */
+#app.dark .drag-overlay-global {
+  background: rgba(30, 30, 30, 0.95);
+}
+
+#app.dark .drag-overlay-content {
+  background: #2a2a2a;
+  border-color: var(--theme-primary);
+}
+
+#app.dark .drag-overlay-content h2 {
+  color: #ddd;
+}
+
+#app.dark .drag-overlay-content p {
+  color: #999;
 }
 </style>

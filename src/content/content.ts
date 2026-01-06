@@ -20,7 +20,7 @@ function detectContentType(): string | null {
   return null
 }
 
-// 检测文本是否为 JSONL 格式（优化：只检查前几行，快速判断）
+// 检测文本是否为 JSONL 格式（快速检测：只检查格式特征，不完整解析）
 function isJsonLines(text: string): boolean {
   const lines = text.trim().split('\n')
 
@@ -28,7 +28,7 @@ function isJsonLines(text: string): boolean {
     return false
   }
 
-  // 只检查前5行即可快速判断，不需要解析整个文件
+  // 只检查前5行即可快速判断
   const samplesToCheck = Math.min(lines.length, 5)
   let validCount = 0
 
@@ -36,10 +36,12 @@ function isJsonLines(text: string): boolean {
     const line = lines[i].trim()
     if (!line) continue
 
-    try {
-      JSON.parse(line)
+    // 快速检测：JSON 对象以 { 开头，数组以 [ 开头
+    const firstChar = line[0]
+    if (firstChar === '{' || firstChar === '[') {
       validCount++
-    } catch {
+    } else {
+      // 不是 JSON 格式
       return false
     }
   }
@@ -47,11 +49,29 @@ function isJsonLines(text: string): boolean {
   return validCount >= 2
 }
 
-// 快速检测：只读取前 1KB 内容进行初步判断
+// 快速检测：只读取前几KB内容，仅检查完整的行
 function quickDetectJsonLines(text: string): boolean {
-  // 只检查前 1KB（大约 10-20 行）
-  const sample = text.substring(0, 1024)
-  return isJsonLines(sample)
+  // 如果内容很短（<=2KB），直接检测全部内容
+  if (text.length <= 2048) {
+    return isJsonLines(text)
+  }
+
+  // 内容较长，只读取前 2KB 避免性能问题
+  const sample = text.substring(0, 2048)
+
+  // 只保留完整的行（去掉最后可能被截断的行）
+  const lastNewlineIndex = sample.lastIndexOf('\n')
+  if (lastNewlineIndex === -1) {
+    // 如果连一个换行符都没有，说明可能是单行JSON（或第一行超过2KB）
+    // 无法判断是否为JSONL，返回false，让后续完整检测处理
+    return false
+  }
+
+  // 只检查到最后一个完整行
+  const completeLines = sample.substring(0, lastNewlineIndex)
+
+  // 检测完整的行
+  return isJsonLines(completeLines)
 }
 
 // 检测文本是否为有效的 JSON
@@ -99,18 +119,23 @@ function tryEarlyIntercept() {
     return
   }
 
-  // 尝试获取前 1KB 内容进行快速检测
+  // 获取当前内容
   const bodyText = document.body?.textContent || ''
 
-  // 如果内容少于 100 字节，等待更多内容
+  // 如果内容太少，判断是否需要等待
   if (bodyText.length < 100) {
-    return
+    // 如果 DOM 已加载完成，说明文件就是这么小，直接检测
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      console.log('[JSONL Viewer] 小文件检测，内容长度:', bodyText.length)
+      // 继续检测，不返回
+    } else {
+      // DOM 仍在加载，等待更多内容
+      return
+    }
   }
 
-  // 快速检测前 1KB 是否为 JSONL/JSON
-  const sample = bodyText.substring(0, 1024)
-
-  if (quickDetectJsonLines(sample) || isValidJson(sample)) {
+  // 快速检测是否为 JSONL/JSON
+  if (quickDetectJsonLines(bodyText) || isValidJson(bodyText)) {
     // 立即标记为已处理，阻止后续检测
     handled = true
 

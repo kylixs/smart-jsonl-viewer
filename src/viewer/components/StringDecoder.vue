@@ -509,6 +509,9 @@ const selectedLanguageLabel = computed(() => {
 // 弹窗打开/关闭时的处理
 watch(showModal, async (isOpen) => {
   if (isOpen) {
+    // 禁止页面滚动，隐藏滚动条（标准弹窗做法）
+    document.body.style.overflow = 'hidden'
+
     showToc.value = true
 
     // 用户打开解码内容弹窗表示正在查看结果，触发保存搜索历史
@@ -542,6 +545,9 @@ watch(showModal, async (isOpen) => {
     // 重置下拉框状态
     showLanguageDropdown.value = false
   } else {
+    // 恢复页面滚动
+    document.body.style.overflow = ''
+
     // 弹窗关闭时清空渲染内容，释放内存
     markdownHtml.value = ''
     markdownToc.value = []
@@ -682,6 +688,10 @@ watch(showModal, (isOpen) => {
 // 组件卸载时清理事件监听
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
+  // 如果组件卸载时弹窗还开着，恢复页面滚动
+  if (showModal.value) {
+    document.body.style.overflow = ''
+  }
 })
 </script>
 

@@ -1484,14 +1484,14 @@ body {
   }
 }
 
-/* 暗色主题下的滚动按钮 */
+/* 暗色主题下的滚动按钮 - 使用当前主题颜色 */
 #app.dark .scroll-btn {
-  background: linear-gradient(135deg, #5568d3 0%, #6a3f8c 100%);
-  box-shadow: 0 4px 12px rgba(85, 104, 211, 0.4);
+  background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
+  box-shadow: 0 4px 12px var(--theme-shadow-color);
 }
 
 #app.dark .scroll-btn:hover {
-  box-shadow: 0 6px 16px rgba(85, 104, 211, 0.5);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--theme-shadow-color) 133%, transparent);
 }
 
 /* 暗色主题下的主题菜单 */

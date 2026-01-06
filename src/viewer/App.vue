@@ -43,8 +43,17 @@
     <SearchFilter v-if="store.totalLines > 0" />
 
     <main class="app-main">
+      <!-- 加载中状态（自动加载模式） -->
+      <div v-if="isAutoLoad && isLoading" class="loading-area">
+        <div class="loading-content">
+          <div class="loading-spinner"></div>
+          <h2>正在加载 JSONL 文件...</h2>
+          <p>请稍候</p>
+        </div>
+      </div>
+
       <!-- 文件上传区域 -->
-      <div v-if="store.totalLines === 0"
+      <div v-else-if="store.totalLines === 0"
            class="upload-area"
            tabindex="0"
            @drop.prevent="handleDrop"
@@ -151,6 +160,11 @@ const showPasteDialog = ref(false)
 const pasteContent = ref('')
 const showThemeMenu = ref(false)
 
+// 自动加载模式（从 URL 参数判断是否来自页面拦截）
+const isAutoLoad = ref(false)
+// 加载中状态
+const isLoading = ref(false)
+
 // 滚动按钮状态
 const isAtTop = ref(true)
 const isAtBottom = ref(false)
@@ -161,6 +175,15 @@ const SMOOTH_SCROLL_VIEWPORTS = 10
 const themeTitle = computed(() => {
   return store.isDark ? '切换到亮色主题' : '切换到暗色主题'
 })
+
+// 检测是否为自动加载模式（来自页面拦截）
+const urlParams = new URLSearchParams(window.location.search)
+isAutoLoad.value = urlParams.get('autoload') === 'true'
+
+// 如果是自动加载模式，显示加载状态
+if (isAutoLoad.value) {
+  isLoading.value = true
+}
 
 // 立即加载并应用主题（在页面渲染前）
 store.loadTheme()
@@ -192,8 +215,11 @@ function handleMessage(event: MessageEvent) {
   if (event.data.type === 'LOAD_JSONL') {
     try {
       store.loadText(event.data.data)
+      // 加载成功后关闭加载状态
+      isLoading.value = false
     } catch (err) {
       showError('无法解析文件内容')
+      isLoading.value = false
     }
   }
 }
@@ -617,6 +643,46 @@ body {
   min-height: calc(100vh - 80px);
 }
 
+/* 加载中区域 */
+.loading-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+  margin: 40px;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 60px;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 24px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--theme-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-content h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.loading-content p {
+  font-size: 14px;
+  color: #666;
+}
+
 .upload-area {
   display: flex;
   align-items: center;
@@ -928,6 +994,19 @@ body {
 }
 
 /* 暗色主题 */
+#app.dark .loading-content h2 {
+  color: #ddd;
+}
+
+#app.dark .loading-content p {
+  color: #999;
+}
+
+#app.dark .loading-spinner {
+  border-color: #444;
+  border-top-color: var(--theme-primary);
+}
+
 #app.dark .upload-area {
   border-color: #444;
 }

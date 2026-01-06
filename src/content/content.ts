@@ -56,9 +56,9 @@ function isValidJson(text: string): boolean {
 
 // 替换页面为查看器
 function replaceWithViewer(text: string) {
-  // 创建 iframe
+  // 创建 iframe，添加 autoload 参数告知是自动加载模式
   const iframe = document.createElement('iframe')
-  iframe.src = chrome.runtime.getURL('index.html')
+  iframe.src = chrome.runtime.getURL('index.html') + '?autoload=true'
   iframe.style.cssText =
     'position:fixed; top:0; left:0; width:100%; height:100%; border:none; z-index:999999;'
 

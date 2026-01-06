@@ -1,6 +1,12 @@
 /**
  * Content Script - 拦截网页中的 JSONL/JSON 响应
+ * 优化：在 document_start 时立即执行，配合 CSS 隐藏原始内容
  */
+
+// 立即隐藏 body，避免浏览器渲染纯文本（在 CSS 之外再加一层保险）
+if (document.body) {
+  document.body.style.visibility = 'hidden'
+}
 
 // 检测页面内容类型
 function detectContentType(): string | null {
@@ -56,8 +62,9 @@ function replaceWithViewer(text: string) {
   iframe.style.cssText =
     'position:fixed; top:0; left:0; width:100%; height:100%; border:none; z-index:999999;'
 
-  // 清空页面并插入 iframe
+  // 清空页面并插入 iframe（body 已被 CSS 隐藏）
   document.body.innerHTML = ''
+  document.body.style.visibility = 'visible' // 恢复可见性，显示 iframe
   document.body.appendChild(iframe)
 
   // 等待 iframe 加载完成后传递数据
@@ -76,7 +83,9 @@ function replaceWithViewer(text: string) {
 function main() {
   const contentType = detectContentType()
 
+  // 如果不是相关内容类型，恢复页面显示
   if (!contentType) {
+    restorePageVisibility()
     return
   }
 
@@ -84,12 +93,23 @@ function main() {
   const bodyText = document.body.innerText || document.body.textContent || ''
 
   if (!bodyText.trim()) {
+    restorePageVisibility()
     return
   }
 
   // 检测是否为 JSONL 或 JSON
   if (isJsonLines(bodyText) || isValidJson(bodyText)) {
     replaceWithViewer(bodyText)
+  } else {
+    // 不是 JSON/JSONL，恢复页面显示
+    restorePageVisibility()
+  }
+}
+
+// 恢复页面可见性（针对非 JSON/JSONL 页面）
+function restorePageVisibility() {
+  if (document.body) {
+    document.body.style.visibility = 'visible'
   }
 }
 

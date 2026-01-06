@@ -1,0 +1,15 @@
+/**
+ * Content Script CSS - 立即隐藏浏览器渲染的纯文本
+ * 避免无意义的 layout 和渲染开销
+ */
+
+/* 隐藏浏览器默认的 JSON/文本渲染 */
+body > pre:only-child {
+  display: none !important;
+}
+
+/* 如果整个 body 只有文本节点，也隐藏 */
+body:empty,
+body:has(> pre:only-child) {
+  visibility: hidden !important;
+}

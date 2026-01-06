@@ -1,9 +1,10 @@
 /**
  * Markdown 检测和渲染工具
  * 使用 markdown-it 作为核心渲染器，支持 Mermaid 图表
+ * 优化策略：按需加载 markdown-it，提升初始加载速度
  */
 
-import MarkdownIt from 'markdown-it'
+import type MarkdownIt from 'markdown-it'
 
 /**
  * 标题项接口
@@ -15,52 +16,67 @@ export interface TocItem {
 }
 
 /**
- * 创建 markdown-it 实例
+ * markdown-it 实例（延迟加载）
  */
-const md = new MarkdownIt({
-  html: true, // 允许HTML标签
-  linkify: true, // 自动转换URL为链接
-  typographer: true, // 启用智能引号和其他排版替换
-  breaks: false, // 不将单个换行符转换为<br>（符合标准Markdown）
-})
+let mdInstance: MarkdownIt | null = null
 
-// 自定义渲染规则：为标题添加ID
-md.renderer.rules.heading_open = (tokens, idx) => {
-  const token = tokens[idx]
-  const nextToken = tokens[idx + 1]
+/**
+ * 获取或创建 markdown-it 实例（仅在首次调用时加载）
+ */
+async function getMarkdownInstance(): Promise<MarkdownIt> {
+  if (!mdInstance) {
+    const MarkdownItModule = await import('markdown-it')
+    const MarkdownIt = MarkdownItModule.default
 
-  if (nextToken && nextToken.type === 'inline') {
-    const text = nextToken.content
-    const id = generateHeadingId(text)
-    const level = token.markup.length
-    return `<h${level} id="${id}">`
+    mdInstance = new MarkdownIt({
+      html: true, // 允许HTML标签
+      linkify: true, // 自动转换URL为链接
+      typographer: true, // 启用智能引号和其他排版替换
+      breaks: false, // 不将单个换行符转换为<br>（符合标准Markdown）
+    })
+
+    // 自定义渲染规则：为标题添加ID
+    mdInstance.renderer.rules.heading_open = (tokens, idx) => {
+      const token = tokens[idx]
+      const nextToken = tokens[idx + 1]
+
+      if (nextToken && nextToken.type === 'inline') {
+        const text = nextToken.content
+        const id = generateHeadingId(text)
+        const level = token.markup.length
+        return `<h${level} id="${id}">`
+      }
+
+      const level = token.markup.length
+      return `<h${level}>`
+    }
+
+    // 自定义代码块渲染：标记 Mermaid 代码块
+    const defaultFence = mdInstance.renderer.rules.fence!
+    mdInstance.renderer.rules.fence = (tokens, idx, options, env, self) => {
+      const token = tokens[idx]
+      const lang = token.info.trim()
+
+      // 如果是 mermaid 代码块，添加特殊标记
+      if (lang === 'mermaid') {
+        return `<pre class="mermaid">${token.content}</pre>`
+      }
+
+      // 其他代码块使用默认渲染
+      return defaultFence(tokens, idx, options, env, self)
+    }
   }
 
-  const level = token.markup.length
-  return `<h${level}>`
-}
-
-// 自定义代码块渲染：标记 Mermaid 代码块
-const defaultFence = md.renderer.rules.fence!
-md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-  const token = tokens[idx]
-  const lang = token.info.trim()
-
-  // 如果是 mermaid 代码块，添加特殊标记
-  if (lang === 'mermaid') {
-    return `<pre class="mermaid">${token.content}</pre>`
-  }
-
-  // 其他代码块使用默认渲染
-  return defaultFence(tokens, idx, options, env, self)
+  return mdInstance
 }
 
 /**
- * 生成目录结构
+ * 生成目录结构（异步）
  */
-export function generateToc(markdown: string): TocItem[] {
+export async function generateToc(markdown: string): Promise<TocItem[]> {
   if (!markdown) return []
 
+  const md = await getMarkdownInstance()
   const toc: TocItem[] = []
   const tokens = md.parse(markdown, {})
 
@@ -171,13 +187,14 @@ export function isMarkdown(text: string): boolean {
 }
 
 /**
- * 使用 markdown-it 渲染 Markdown
+ * 使用 markdown-it 渲染 Markdown（异步）
  * 支持 Mermaid 图表（需要配合前端 mermaid 库渲染）
  */
-export function renderMarkdown(markdown: string): string {
+export async function renderMarkdown(markdown: string): Promise<string> {
   if (!markdown) return ''
 
   try {
+    const md = await getMarkdownInstance()
     return md.render(markdown)
   } catch (err) {
     console.error('Markdown rendering error:', err)

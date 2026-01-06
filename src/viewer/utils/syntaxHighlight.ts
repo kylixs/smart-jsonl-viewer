@@ -9,8 +9,9 @@ import type { LanguageType } from './codeDetector'
 
 // Shiki 高亮器实例（单例）
 let highlighterInstance: Highlighter | null = null
-let currentTheme: BundledTheme = 'github-light'
+let currentLightTheme: BundledTheme = 'github-light'
 let currentDarkTheme: BundledTheme = 'github-dark'
+let currentMode: 'auto' | 'light' | 'dark' = 'auto'
 
 // 已加载的主题集合
 const loadedThemes = new Set<BundledTheme>()
@@ -90,9 +91,14 @@ async function ensureLangLoaded(lang: BundledLanguage): Promise<void> {
 /**
  * 设置当前主题（并预加载）
  */
-export async function setTheme(lightTheme: BundledTheme, darkTheme: BundledTheme) {
-  currentTheme = lightTheme
+export async function setTheme(
+  lightTheme: BundledTheme,
+  darkTheme: BundledTheme,
+  mode: 'auto' | 'light' | 'dark' = 'auto'
+) {
+  currentLightTheme = lightTheme
   currentDarkTheme = darkTheme
+  currentMode = mode
 
   // 预加载新主题
   await ensureThemeLoaded(lightTheme)
@@ -113,7 +119,17 @@ export async function highlightCode(
   try {
     const highlighter = await getHighlighterInstance()
     const shikiLang = languageMap[language] || 'javascript'
-    const theme = isDark ? currentDarkTheme : currentTheme
+
+    // 根据 mode 决定使用哪个主题
+    let theme: BundledTheme
+    if (currentMode === 'light') {
+      theme = currentLightTheme
+    } else if (currentMode === 'dark') {
+      theme = currentDarkTheme
+    } else {
+      // auto 模式：根据系统暗色模式自动切换
+      theme = isDark ? currentDarkTheme : currentLightTheme
+    }
 
     // 确保主题和语言已加载
     await ensureThemeLoaded(theme)

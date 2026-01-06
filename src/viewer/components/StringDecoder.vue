@@ -188,24 +188,15 @@ import { smartDecode, isDecodable as checkDecodable } from '../utils/decoder'
 import { stripAnsi } from '../utils/ansi'
 import { useJsonlStore } from '../stores/jsonlStore'
 import { copyToClipboard } from '../utils/clipboard'
-import { isMarkdown, renderMarkdown, generateToc } from '../utils/markdown'
+import { isMarkdown } from '../utils/markdown'
 import { isCode, detectLanguage, SUPPORTED_LANGUAGES, type LanguageType } from '../utils/codeDetector'
 import { highlightCode, setTheme } from '../utils/syntaxHighlight'
-import mermaid from 'mermaid'
 import {
   codeThemes,
   getCodeThemeById,
   saveCodeThemePreference,
   loadCodeThemePreference
 } from '../utils/codeThemes'
-
-// 初始化 mermaid
-mermaid.initialize({
-  startOnLoad: false, // 手动控制渲染时机
-  theme: 'default',
-  securityLevel: 'loose', // 允许点击等交互
-  fontFamily: 'Arial, sans-serif',
-})
 
 interface Props {
   value: any
@@ -237,7 +228,7 @@ const initTheme = async () => {
   if (shikiInitialized.value) return
 
   const theme = getCodeThemeById(selectedCodeTheme.value)
-  await setTheme(theme.lightTheme, theme.darkTheme)
+  await setTheme(theme.lightTheme, theme.darkTheme, theme.mode || 'auto')
   shikiInitialized.value = true
 }
 
@@ -252,7 +243,7 @@ watch(() => store.isDark, () => {
 async function handleCodeThemeChange() {
   saveCodeThemePreference(selectedCodeTheme.value)
   const theme = getCodeThemeById(selectedCodeTheme.value)
-  await setTheme(theme.lightTheme, theme.darkTheme)
+  await setTheme(theme.lightTheme, theme.darkTheme, theme.mode || 'auto')
 
   // 重新高亮代码
   if (showModal.value && isCodeContent.value && decodedValue.value) {
@@ -367,40 +358,57 @@ const isCodeContent = computed(() => {
   return isCode(decodedValue.value)
 })
 
-// 渲染后的 Markdown HTML
-const markdownHtml = computed(() => {
-  if (!isMarkdownContent.value) return ''
-  return renderMarkdown(decodedValue.value)
-})
+// 渲染后的 Markdown HTML（使用 ref 因为是异步加载）
+const markdownHtml = ref('')
 
-// 监听 markdownHtml 变化，渲染 Mermaid 图表
-watch(markdownHtml, async () => {
-  if (markdownHtml.value && showModal.value) {
-    await nextTick()
-    try {
-      // 查找所有 mermaid 代码块并渲染
-      await mermaid.run({
-        querySelector: '.markdown-preview .mermaid',
-      })
-    } catch (err) {
-      console.error('Mermaid rendering error:', err)
-    }
-  }
-})
+// Mermaid 是否已初始化
+let mermaidInstance: any = null
 
-// 监听模态框打开，触发 mermaid 渲染
-watch(showModal, async (isOpen) => {
-  if (isOpen && markdownHtml.value) {
-    await nextTick()
-    try {
-      await mermaid.run({
-        querySelector: '.markdown-preview .mermaid',
-      })
-    } catch (err) {
-      console.error('Mermaid rendering error:', err)
-    }
+// 异步更新 Markdown HTML
+async function updateMarkdownHtml() {
+  if (!isMarkdownContent.value) {
+    markdownHtml.value = ''
+    return
   }
-})
+
+  try {
+    const { renderMarkdown } = await import('../utils/markdown')
+    markdownHtml.value = await renderMarkdown(decodedValue.value)
+
+    // 渲染完成后，渲染 Mermaid 图表
+    await nextTick()
+    await renderMermaid()
+  } catch (err) {
+    console.error('Markdown rendering error:', err)
+    markdownHtml.value = `<p>Markdown 渲染错误</p>`
+  }
+}
+
+// 渲染 Mermaid 图表
+async function renderMermaid() {
+  try {
+    // 动态导入 mermaid（仅在需要时加载）
+    if (!mermaidInstance) {
+      const mermaidModule = await import('mermaid')
+      mermaidInstance = mermaidModule.default
+
+      // 初始化 mermaid
+      mermaidInstance.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        securityLevel: 'loose',
+        fontFamily: 'Arial, sans-serif',
+      })
+    }
+
+    // 查找并渲染所有 mermaid 代码块
+    await mermaidInstance.run({
+      querySelector: '.markdown-preview .mermaid',
+    })
+  } catch (err) {
+    console.error('Mermaid rendering error:', err)
+  }
+}
 
 // 渲染后的代码 HTML（语法高亮）- 使用 ref 因为 Shiki 是异步的
 const highlightedCode = ref('')
@@ -443,11 +451,24 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;')
 }
 
-// 生成 Markdown 目录
-const markdownToc = computed(() => {
-  if (!isMarkdownContent.value) return []
-  return generateToc(decodedValue.value)
-})
+// 生成 Markdown 目录（使用 ref 因为是异步加载）
+const markdownToc = ref<any[]>([])
+
+// 异步更新 Markdown 目录
+async function updateMarkdownToc() {
+  if (!isMarkdownContent.value) {
+    markdownToc.value = []
+    return
+  }
+
+  try {
+    const { generateToc } = await import('../utils/markdown')
+    markdownToc.value = await generateToc(decodedValue.value)
+  } catch (err) {
+    console.error('TOC generation error:', err)
+    markdownToc.value = []
+  }
+}
 
 // 是否显示目录（至少有 2 个标题才显示）
 const shouldShowToc = computed(() => {
@@ -485,7 +506,7 @@ const selectedLanguageLabel = computed(() => {
   return lang ? lang.label : 'Unknown'
 })
 
-// 弹窗打开时重置视图模式并自动检测内容类型
+// 弹窗打开/关闭时的处理
 watch(showModal, async (isOpen) => {
   if (isOpen) {
     showToc.value = true
@@ -508,12 +529,23 @@ watch(showModal, async (isOpen) => {
       })
     } else if (isMarkdownContent.value) {
       modalViewMode.value = 'markdown'
+
+      // 异步初始化 Markdown 渲染和目录生成（不阻塞弹窗显示）
+      nextTick(() => {
+        updateMarkdownHtml()
+        updateMarkdownToc()
+      })
     } else {
       modalViewMode.value = 'raw'
     }
 
     // 重置下拉框状态
     showLanguageDropdown.value = false
+  } else {
+    // 弹窗关闭时清空渲染内容，释放内存
+    markdownHtml.value = ''
+    markdownToc.value = []
+    highlightedCode.value = ''
   }
 })
 
@@ -522,6 +554,19 @@ watch(selectedLanguage, (newLang) => {
   const lang = SUPPORTED_LANGUAGES.find(l => l.value === newLang)
   if (lang && !showLanguageDropdown.value) {
     languageSearchQuery.value = lang.label
+  }
+})
+
+// 监听视图模式切换，当切换到 Markdown 预览时触发渲染
+watch(modalViewMode, async (newMode) => {
+  if (newMode === 'markdown' && showModal.value && isMarkdownContent.value) {
+    // 只在还没有渲染内容时才触发（避免重复渲染）
+    if (!markdownHtml.value) {
+      await updateMarkdownHtml()
+    }
+    if (markdownToc.value.length === 0) {
+      await updateMarkdownToc()
+    }
   }
 })
 

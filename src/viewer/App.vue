@@ -652,6 +652,7 @@ function handleIndentSizeChange() {
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
+  font-size: 13px;
 }
 
 #app {
@@ -670,7 +671,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 8px 16px;
   background: linear-gradient(135deg, var(--theme-gradient-from) 0%, var(--theme-gradient-to) 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -679,18 +680,18 @@ body {
 .app-title-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .app-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
 }
 
 .current-file-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  padding: 6px 12px;
+  padding: 4px 10px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   max-width: 300px;
@@ -703,7 +704,7 @@ body {
 .app-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .depth-control {
@@ -743,7 +744,7 @@ body {
 }
 
 .action-btn {
-  padding: 8px 16px;
+  padding: 4px 10px;
   font-size: 18px;
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);

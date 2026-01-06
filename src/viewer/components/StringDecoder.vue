@@ -767,7 +767,7 @@ onUnmounted(() => {
   display: inline-flex;
   flex-direction: column;
   gap: 4px;
-  background: #fff3cd;
+  background: #fef9e7;
   padding: 6px 8px;
   margin: 1px 0;
   border-radius: 3px;
@@ -828,7 +828,7 @@ onUnmounted(() => {
 }
 
 :root.dark .decoded-value {
-  background: #3a3a2a;
+  background: #2a2a22;
 }
 
 :root.dark .action-btn {

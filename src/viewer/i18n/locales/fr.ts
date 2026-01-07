@@ -59,6 +59,9 @@ export default {
   settings: {
     title: 'Paramètres',
     close: 'Fermer',
+    language: 'Langue',
+    themeColor: 'Couleur du thème',
+    themeMode: 'Mode du thème',
     maxLines: 'Lignes d\'aperçu',
     indentSize: 'Taille d\'indentation',
     unlimited: 'Illimité',
@@ -68,7 +71,9 @@ export default {
   theme: {
     toggle: 'Basculer le thème',
     light: 'Passer au thème clair',
+    lightMode: 'Clair',
     dark: 'Passer au thème sombre',
+    darkMode: 'Sombre',
     selectColor: 'Sélectionner la couleur du thème',
     colors: {
       ocean: 'Bleu océan',

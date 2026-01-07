@@ -14,7 +14,7 @@
         <span v-if="currentFileName" class="current-file-name">{{ currentFileName }}</span>
       </div>
       <div class="app-actions">
-        <button class="action-btn" @click="goToHome" title="返回首页" v-if="store.totalLines > 0">
+        <button class="action-btn" @click="goToHome" :title="t('app.home')" v-if="store.totalLines > 0">
           🏠
         </button>
         <button class="action-btn" @click="toggleHelpDialog" :title="t('app.help')">
@@ -23,91 +23,108 @@
         <button class="action-btn" @click="toggleTheme" :title="themeTitle">
           {{ store.isDark ? '☀️' : '🌙' }}
         </button>
-        <div class="theme-selector">
-          <button class="action-btn theme-btn" @click.stop="toggleThemeMenu" title="选择主题配色">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22C9.79 22 7.79 21.21 6.34 19.84C4.89 18.47 4 16.61 4 14.5C4 12.68 4.67 11.04 5.82 9.84C6.97 8.64 8.5 8 10.22 8C10.23 6.75 10.67 5.55 11.46 4.59C12.25 3.63 13.33 3 14.5 3C15.67 3 16.75 3.63 17.54 4.59C18.33 5.55 18.77 6.75 18.78 8C20.5 8 22.03 8.64 23.18 9.84C24.33 11.04 25 12.68 25 14.5C25 16.61 24.11 18.47 22.66 19.84C21.21 21.21 19.21 22 17 22H12Z" transform="translate(-2 -1)" fill="currentColor"/>
-              <circle cx="8" cy="11" r="1.5" fill="white"/>
-              <circle cx="12" cy="9" r="1.5" fill="white"/>
-              <circle cx="16" cy="11" r="1.5" fill="white"/>
-              <circle cx="10" cy="14" r="1.5" fill="white"/>
-              <circle cx="14" cy="14" r="1.5" fill="white"/>
-            </svg>
-          </button>
-          <div v-if="showThemeMenu" class="theme-menu" @click.stop>
-            <div
-              v-for="theme in store.availableThemes"
-              :key="theme.id"
-              class="theme-menu-item"
-              :class="{ active: theme.id === store.currentThemeColor }"
-              @click="selectTheme(theme.id)"
-            >
-              <span class="theme-color-preview" :style="{ background: `linear-gradient(135deg, ${theme.colors.gradientFrom} 0%, ${theme.colors.gradientTo} 100%)` }"></span>
-              <span class="theme-name">{{ theme.name }}</span>
-              <span v-if="theme.id === store.currentThemeColor" class="theme-check">✓</span>
-            </div>
-          </div>
-        </div>
-        <div class="language-selector">
-          <button class="action-btn language-btn" @click.stop="toggleLanguageMenu" title="选择语言">
-            🌐
-          </button>
-          <div v-if="showLanguageMenu" class="language-menu" @click.stop>
-            <div
-              v-for="locale in availableLocales"
-              :key="locale.code"
-              class="language-menu-item"
-              :class="{ active: locale.code === currentLocale }"
-              @click="selectLanguage(locale.code)"
-            >
-              <span class="language-flag">{{ locale.flag }}</span>
-              <span class="language-name">{{ locale.name }}</span>
-              <span v-if="locale.code === currentLocale" class="language-check">✓</span>
-            </div>
-          </div>
-        </div>
-        <div class="settings-selector">
-          <button class="action-btn settings-btn" @click.stop="toggleSettingsPanel" title="设置">
-            ⚙️
-          </button>
-          <div v-if="showSettingsPanel" class="settings-panel" @click.stop>
-            <div class="settings-header">
-              <span class="settings-title">设置</span>
-              <button class="settings-close" @click="showSettingsPanel = false" title="关闭">
-                ✕
-              </button>
-            </div>
-            <div class="settings-content">
-              <div class="setting-item">
-                <label class="setting-label">预览行数:</label>
-                <select v-model="selectedMaxLines" @change="handleMaxLinesChange" class="setting-select">
-                  <option :value="-1">不限制</option>
-                  <option :value="5">5行</option>
-                  <option :value="10">10行</option>
-                  <option :value="20">20行</option>
-                  <option :value="30">30行</option>
-                  <option :value="50">50行</option>
-                  <option :value="100">100行</option>
-                </select>
-              </div>
-              <div class="setting-item">
-                <label class="setting-label">缩进字符数:</label>
-                <select v-model="selectedIndentSize" @change="handleIndentSizeChange" class="setting-select">
-                  <option :value="2">2个空格</option>
-                  <option :value="4">4个空格</option>
-                  <option :value="8">8个空格</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-        <button class="action-btn" @click="handleExport" title="导出" v-if="store.totalLines > 0">
+        <button class="action-btn settings-btn" @click.stop="toggleSettingsPanel" :title="t('app.settings')">
+          ⚙️
+        </button>
+        <button class="action-btn" @click="handleExport" :title="t('app.export')" v-if="store.totalLines > 0">
           📥
         </button>
       </div>
     </header>
 
     <SearchFilter v-if="store.totalLines > 0" />
+
+    <!-- 设置对话框 -->
+    <div v-if="showSettingsPanel" class="settings-dialog-overlay" @click="showSettingsPanel = false">
+      <div class="settings-dialog" @click.stop>
+        <div class="settings-header">
+          <h2>{{ t('settings.title') }}</h2>
+          <button class="settings-close" @click="showSettingsPanel = false" :title="t('settings.close')">✕</button>
+        </div>
+        <div class="settings-content">
+          <!-- 语言选择 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.language') }}:</label>
+            <div class="setting-options-grid">
+              <div
+                v-for="locale in availableLocales"
+                :key="locale.code"
+                class="setting-option-card"
+                :class="{ active: locale.code === currentLocale }"
+                @click="selectLanguage(locale.code)"
+              >
+                <span class="option-icon">{{ locale.flag }}</span>
+                <span class="option-name">{{ locale.name }}</span>
+                <span v-if="locale.code === currentLocale" class="option-check">✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 主题模式 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.themeMode') }}:</label>
+            <div class="setting-toggle-group">
+              <button
+                class="setting-toggle-btn"
+                :class="{ active: !store.isDark }"
+                @click="store.isDark && toggleTheme()"
+              >
+                ☀️ {{ t('theme.lightMode') }}
+              </button>
+              <button
+                class="setting-toggle-btn"
+                :class="{ active: store.isDark }"
+                @click="!store.isDark && toggleTheme()"
+              >
+                🌙 {{ t('theme.darkMode') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 主题配色 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.themeColor') }}:</label>
+            <div class="setting-options-grid">
+              <div
+                v-for="theme in store.availableThemes"
+                :key="theme.id"
+                class="setting-option-card"
+                :class="{ active: theme.id === store.currentThemeColor }"
+                @click="selectTheme(theme.id)"
+              >
+                <span class="theme-color-preview-large" :style="{ background: `linear-gradient(135deg, ${theme.colors.gradientFrom} 0%, ${theme.colors.gradientTo} 100%)` }"></span>
+                <span class="option-name">{{ theme.name }}</span>
+                <span v-if="theme.id === store.currentThemeColor" class="option-check">✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 预览行数 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.maxLines') }}:</label>
+            <select v-model="selectedMaxLines" @change="handleMaxLinesChange" class="setting-select">
+              <option :value="-1">{{ t('settings.unlimited') }}</option>
+              <option :value="5">5 {{ t('settings.lines') }}</option>
+              <option :value="10">10 {{ t('settings.lines') }}</option>
+              <option :value="20">20 {{ t('settings.lines') }}</option>
+              <option :value="30">30 {{ t('settings.lines') }}</option>
+              <option :value="50">50 {{ t('settings.lines') }}</option>
+              <option :value="100">100 {{ t('settings.lines') }}</option>
+            </select>
+          </div>
+
+          <!-- 缩进字符数 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.indentSize') }}:</label>
+            <select v-model="selectedIndentSize" @change="handleIndentSizeChange" class="setting-select">
+              <option :value="2">2 {{ t('settings.spaces') }}</option>
+              <option :value="4">4 {{ t('settings.spaces') }}</option>
+              <option :value="8">8 {{ t('settings.spaces') }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <main class="app-main">
       <!-- 加载中状态（自动加载模式） -->
@@ -325,10 +342,8 @@ const isDragging = ref(false)
 const error = ref('')
 const showPasteDialog = ref(false)
 const pasteContent = ref('')
-const showThemeMenu = ref(false)
 const showSettingsPanel = ref(false)
 const showHelpDialog = ref(false)
-const showLanguageMenu = ref(false)
 const selectedMaxLines = ref(10)
 const selectedIndentSize = ref(2)
 
@@ -349,7 +364,7 @@ const isAtBottom = ref(false)
 const SMOOTH_SCROLL_VIEWPORTS = 10
 
 const themeTitle = computed(() => {
-  return store.isDark ? '切换到亮色主题' : '切换到暗色主题'
+  return store.isDark ? t('theme.light') : t('theme.dark')
 })
 
 // 进度相关计算属性
@@ -425,18 +440,12 @@ onMounted(() => {
   window.addEventListener('scroll', handleScroll)
   // 初始化滚动状态
   handleScroll()
-
-  // 监听全局点击事件，关闭主题菜单
-  window.addEventListener('click', closeThemeMenu)
-  window.addEventListener('click', closeLanguageMenu)
 })
 
 onBeforeUnmount(() => {
   // 清理事件监听器
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('message', handleMessage)
-  window.removeEventListener('click', closeThemeMenu)
-  window.removeEventListener('click', closeLanguageMenu)
 
   // 清空 Store 数据，释放内存
   store.cleanup()
@@ -641,32 +650,14 @@ function handlePaste(event: ClipboardEvent) {
   }
 }
 
-// 主题菜单相关函数
-function toggleThemeMenu() {
-  showThemeMenu.value = !showThemeMenu.value
-}
-
+// 主题相关函数
 function selectTheme(themeId: string) {
   setThemeColor(themeId)
-  showThemeMenu.value = false
-}
-
-function closeThemeMenu() {
-  showThemeMenu.value = false
 }
 
 // 语言相关函数
-function toggleLanguageMenu() {
-  showLanguageMenu.value = !showLanguageMenu.value
-}
-
 function selectLanguage(locale: string) {
   setLocale(locale)
-  showLanguageMenu.value = false
-}
-
-function closeLanguageMenu() {
-  showLanguageMenu.value = false
 }
 
 const currentLocale = computed(() => getLocale())
@@ -2152,5 +2143,268 @@ body {
 #app.dark .help-section code {
   background: #3a3a3a;
   color: #ff6b9d;
+}
+
+/* 设置对话框 */
+.settings-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.settings-dialog {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.settings-close:hover {
+  color: #333;
+}
+
+.settings-content {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.setting-group {
+  margin-bottom: 24px;
+}
+
+.setting-group:last-child {
+  margin-bottom: 0;
+}
+
+.setting-group-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.setting-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.setting-option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.setting-option-card:hover {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 5%, transparent);
+}
+
+.setting-option-card.active {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+}
+
+.option-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.theme-color-preview-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.option-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  text-align: center;
+}
+
+.option-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--theme-primary);
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.setting-toggle-group {
+  display: flex;
+  gap: 12px;
+}
+
+.setting-toggle-btn {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.setting-toggle-btn:hover {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 5%, transparent);
+}
+
+.setting-toggle-btn.active {
+  border-color: var(--theme-primary);
+  background: var(--theme-primary);
+  color: white;
+}
+
+.setting-select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.setting-select:hover {
+  border-color: #ccc;
+}
+
+.setting-select:focus {
+  border-color: var(--theme-primary);
+}
+
+/* 暗色主题 - 设置对话框 */
+#app.dark .settings-dialog {
+  background: #2a2a2a;
+}
+
+#app.dark .settings-header {
+  border-bottom-color: #444;
+}
+
+#app.dark .settings-header h2 {
+  color: #ddd;
+}
+
+#app.dark .settings-close {
+  color: #999;
+}
+
+#app.dark .settings-close:hover {
+  color: #ddd;
+}
+
+#app.dark .setting-group-label {
+  color: #ddd;
+}
+
+#app.dark .setting-option-card {
+  border-color: #444;
+  background: #1e1e1e;
+}
+
+#app.dark .setting-option-card:hover {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, #1e1e1e);
+}
+
+#app.dark .setting-option-card.active {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 15%, #1e1e1e);
+}
+
+#app.dark .option-name {
+  color: #bbb;
+}
+
+#app.dark .setting-toggle-btn {
+  border-color: #444;
+  background: #1e1e1e;
+  color: #bbb;
+}
+
+#app.dark .setting-toggle-btn:hover {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, #1e1e1e);
+}
+
+#app.dark .setting-toggle-btn.active {
+  border-color: var(--theme-primary);
+  background: var(--theme-primary);
+  color: white;
+}
+
+#app.dark .setting-select {
+  border-color: #444;
+  background: #1e1e1e;
+  color: #ddd;
+}
+
+#app.dark .setting-select:hover {
+  border-color: #555;
+}
+
+#app.dark .setting-select:focus {
+  border-color: var(--theme-primary);
 }
 </style>

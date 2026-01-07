@@ -59,6 +59,9 @@ export default {
   settings: {
     title: '设置',
     close: '关闭',
+    language: '语言',
+    themeColor: '主题配色',
+    themeMode: '主题模式',
     maxLines: '预览行数',
     indentSize: '缩进字符数',
     unlimited: '不限制',
@@ -68,7 +71,9 @@ export default {
   theme: {
     toggle: '切换主题',
     light: '切换到亮色主题',
+    lightMode: '亮色主题',
     dark: '切换到暗色主题',
+    darkMode: '暗色主题',
     selectColor: '选择主题配色',
     colors: {
       ocean: '海洋蓝',

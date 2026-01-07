@@ -59,6 +59,9 @@ export default {
   settings: {
     title: 'Settings',
     close: 'Close',
+    language: 'Language',
+    themeColor: 'Theme Color',
+    themeMode: 'Theme Mode',
     maxLines: 'Preview Lines',
     indentSize: 'Indent Size',
     unlimited: 'Unlimited',
@@ -68,7 +71,9 @@ export default {
   theme: {
     toggle: 'Toggle Theme',
     light: 'Switch to Light Theme',
+    lightMode: 'Light',
     dark: 'Switch to Dark Theme',
+    darkMode: 'Dark',
     selectColor: 'Select Theme Color',
     colors: {
       ocean: 'Ocean Blue',

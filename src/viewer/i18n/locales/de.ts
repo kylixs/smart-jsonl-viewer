@@ -59,6 +59,9 @@ export default {
   settings: {
     title: 'Einstellungen',
     close: 'Schließen',
+    language: 'Sprache',
+    themeColor: 'Themenfarbe',
+    themeMode: 'Themamodus',
     maxLines: 'Vorschauzeilen',
     indentSize: 'Einrückungsgröße',
     unlimited: 'Unbegrenzt',
@@ -68,7 +71,9 @@ export default {
   theme: {
     toggle: 'Thema wechseln',
     light: 'Zum hellen Thema wechseln',
+    lightMode: 'Hell',
     dark: 'Zum dunklen Thema wechseln',
+    darkMode: 'Dunkel',
     selectColor: 'Themenfarbe auswählen',
     colors: {
       ocean: 'Ozeanblau',

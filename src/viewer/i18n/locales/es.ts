@@ -58,33 +58,42 @@ export default {
     title: 'Ayuda de Smart JSONL Viewer',
     close: 'Cerrar',
     fileLoading: {
-      title: 'Carga de archivos',
-      feature1: 'Soporte para archivos grandes de 100MB+ con carga rápida',
-      feature2: 'Arrastra y suelta archivos para abrir',
-      feature3: 'Detección automática de archivos .jsonl, .ndjson'
+      title: '📁 Carga de archivos',
+      feature1: 'Abra rápidamente archivos grandes de 100MB+ con carga asíncrona en segundo plano',
+      feature2: 'Soporte para arrastrar y soltar, hacer clic para seleccionar o pegar contenido',
+      feature3: 'Detección automática de formatos .jsonl, .json, .ndjson'
     },
     searchFilter: {
-      title: 'Búsqueda y filtrado',
-      feature1: 'Búsqueda por palabras clave: Soporta múltiples palabras clave separadas por espacios',
-      feature2: 'Expresión regular: Haz clic en .* para activar el modo regex',
-      feature3: 'Ruta JSON: Usa sintaxis de ruta como user.name',
-      feature4: 'Filtro de tipo: Filtrar por cadena, número, booleano, objeto, array'
+      title: '🔍 Búsqueda y filtrado',
+      feature1: 'Alcance del filtro: Por línea / Por nodo',
+      feature2: 'Modo de coincidencia: Difusa / Exacta / JSONPath',
+      feature3: 'Ejemplos de JSONPath: $.user.name, $.data[0], $..content',
+      feature4: 'Buscar en contenido decodificado',
+      feature5: 'Historial de búsqueda para consultas repetidas rápidas'
     },
     smartDecoding: {
-      title: 'Decodificación inteligente',
-      feature1: 'Decodificación automática de cadenas JSON anidadas',
-      feature2: 'Codificación/decodificación URL',
-      feature3: 'Codificación/decodificación Base64',
+      title: '✨ Decodificación inteligente',
+      feature1: 'Detección y decodificación automática de cadenas JSON anidadas',
+      feature2: 'Codificación/decodificación Base64',
+      feature3: 'Codificación/decodificación URL',
       feature4: 'Haz clic en el icono 👁 junto a los campos para ver el contenido decodificado'
     },
     themesSettings: {
-      title: 'Temas y configuración',
-      feature1: 'Alternancia entre tema claro y oscuro',
-      feature2: 'Múltiples esquemas de color (haz clic en el icono de paleta)',
-      feature3: 'Personalizar profundidad de expansión y sangría'
+      title: '🎨 Temas y configuración',
+      feature1: 'Alternancia rápida entre temas claro/oscuro',
+      feature2: '5 esquemas de color: Azul océano, Verde bosque, Naranja atardecer, Púrpura lavanda, Rojo rubí',
+      feature3: 'Personalizar líneas de vista previa y tamaño de sangría',
+      feature4: 'Control flexible de profundidad de expansión (0-5 niveles o expansión completa)'
+    },
+    moreFeatures: {
+      title: '🚀 Más funciones',
+      feature1: 'Exportar resultados filtrados en formato JSONL o JSON',
+      feature2: 'Carga por lotes con soporte "Cargar más"',
+      feature3: 'Desplazamiento rápido hacia arriba/abajo',
+      feature4: 'Soporte multilingüe: Chino, Inglés, Alemán, Francés, Español'
     },
     moreInfo: {
-      title: 'Más información',
+      title: '📖 Más información',
       content: 'Visita GitHub Wiki para documentación detallada'
     }
   },

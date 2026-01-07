@@ -58,33 +58,42 @@ export default {
     title: 'Smart JSONL Viewer Hilfe',
     close: 'Schließen',
     fileLoading: {
-      title: 'Datei laden',
-      feature1: 'Unterstützung für 100MB+ große Dateien mit schnellem Laden',
-      feature2: 'Dateien per Drag & Drop öffnen',
-      feature3: 'Automatische Erkennung von .jsonl, .ndjson Dateien'
+      title: '📁 Datei laden',
+      feature1: 'Schnelles Öffnen von 100MB+ großen Dateien mit Hintergrund-Async-Laden',
+      feature2: 'Unterstützung für Drag & Drop, Klick zum Auswählen oder Inhalt einfügen',
+      feature3: 'Automatische Erkennung von .jsonl, .json, .ndjson Formaten'
     },
     searchFilter: {
-      title: 'Suche & Filter',
-      feature1: 'Stichwortsuche: Mehrere durch Leerzeichen getrennte Stichwörter unterstützt',
-      feature2: 'Regulärer Ausdruck: Klicken Sie auf .* um Regex-Modus zu aktivieren',
-      feature3: 'JSON-Pfad: Verwenden Sie Pfadsyntax wie user.name',
-      feature4: 'Typfilter: Nach Zeichenkette, Zahl, Boolean, Objekt, Array filtern'
+      title: '🔍 Suche & Filter',
+      feature1: 'Filterbereich: Nach Zeile / Nach Knoten',
+      feature2: 'Übereinstimmungsmodus: Unscharf / Exakt / JSONPath',
+      feature3: 'JSONPath Beispiele: $.user.name, $.data[0], $..content',
+      feature4: 'Suche in dekodiertem Inhalt',
+      feature5: 'Suchverlauf für schnelle wiederholte Abfragen'
     },
     smartDecoding: {
-      title: 'Intelligente Dekodierung',
-      feature1: 'Automatische Dekodierung verschachtelter JSON-Strings',
-      feature2: 'URL-Kodierung/-Dekodierung',
-      feature3: 'Base64-Kodierung/-Dekodierung',
+      title: '✨ Intelligente Dekodierung',
+      feature1: 'Automatische Erkennung und Dekodierung verschachtelter JSON-Strings',
+      feature2: 'Base64-Kodierung/-Dekodierung',
+      feature3: 'URL-Kodierung/-Dekodierung',
       feature4: 'Klicken Sie auf das 👁 Symbol neben Feldern, um dekodierte Inhalte anzuzeigen'
     },
     themesSettings: {
-      title: 'Themen & Einstellungen',
-      feature1: 'Hell/Dunkel-Thema-Umschalter',
-      feature2: 'Mehrere Farbschemata (Klicken Sie auf Palettensymbol)',
-      feature3: 'Erweitern Sie Tiefe und Einrückung anpassen'
+      title: '🎨 Themen & Einstellungen',
+      feature1: 'Schneller Wechsel zwischen hellen/dunklen Themen',
+      feature2: '5 Farbschemata: Ozeanblau, Waldgrün, Sonnenuntergangsorange, Lavendelpurpur, Rubinrot',
+      feature3: 'Vorschauzeilen und Einrückungsgröße anpassen',
+      feature4: 'Flexible Steuerung der Erweiterungstiefe (0-5 Ebenen oder vollständige Erweiterung)'
+    },
+    moreFeatures: {
+      title: '🚀 Weitere Funktionen',
+      feature1: 'Exportieren Sie gefilterte Ergebnisse als JSONL- oder JSON-Format',
+      feature2: 'Stapelverarbeitung mit "Mehr laden"-Unterstützung',
+      feature3: 'Schnelles Scrollen nach oben/unten',
+      feature4: 'Mehrsprachige Unterstützung: Chinesisch, Englisch, Deutsch, Französisch, Spanisch'
     },
     moreInfo: {
-      title: 'Weitere Informationen',
+      title: '📖 Weitere Informationen',
       content: 'Besuchen Sie GitHub Wiki für detaillierte Dokumentation'
     }
   },

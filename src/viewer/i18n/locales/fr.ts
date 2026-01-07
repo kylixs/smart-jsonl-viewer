@@ -58,33 +58,42 @@ export default {
     title: 'Aide Smart JSONL Viewer',
     close: 'Fermer',
     fileLoading: {
-      title: 'Chargement de fichiers',
-      feature1: 'Prise en charge des fichiers volumineux de 100 Mo+ avec chargement rapide',
-      feature2: 'Glisser-déposer les fichiers pour ouvrir',
-      feature3: 'Détection automatique des fichiers .jsonl, .ndjson'
+      title: '📁 Chargement de fichiers',
+      feature1: 'Ouvrez rapidement des fichiers volumineux de 100 Mo+ avec chargement asynchrone en arrière-plan',
+      feature2: 'Supporte le glisser-déposer, cliquer pour sélectionner ou coller le contenu',
+      feature3: 'Détection automatique des formats .jsonl, .json, .ndjson'
     },
     searchFilter: {
-      title: 'Recherche et filtrage',
-      feature1: 'Recherche par mots-clés : Supporte plusieurs mots-clés séparés par des espaces',
-      feature2: 'Expression régulière : Cliquez sur .* pour activer le mode regex',
-      feature3: 'Chemin JSON : Utilisez la syntaxe de chemin comme user.name',
-      feature4: 'Filtre de type : Filtrer par chaîne, nombre, booléen, objet, tableau'
+      title: '🔍 Recherche et filtrage',
+      feature1: 'Portée du filtre : Par ligne / Par nœud',
+      feature2: 'Mode de correspondance : Floue / Exacte / JSONPath',
+      feature3: 'Exemples JSONPath : $.user.name, $.data[0], $..content',
+      feature4: 'Rechercher dans le contenu décodé',
+      feature5: 'Historique de recherche pour des requêtes répétées rapides'
     },
     smartDecoding: {
-      title: 'Décodage intelligent',
-      feature1: 'Décodage automatique des chaînes JSON imbriquées',
-      feature2: 'Encodage/décodage URL',
-      feature3: 'Encodage/décodage Base64',
+      title: '✨ Décodage intelligent',
+      feature1: 'Détection et décodage automatiques des chaînes JSON imbriquées',
+      feature2: 'Encodage/décodage Base64',
+      feature3: 'Encodage/décodage URL',
       feature4: 'Cliquez sur l\'icône 👁 à côté des champs pour afficher le contenu décodé'
     },
     themesSettings: {
-      title: 'Thèmes et paramètres',
-      feature1: 'Basculer entre le thème clair et sombre',
-      feature2: 'Plusieurs schémas de couleurs (cliquez sur l\'icône palette)',
-      feature3: 'Personnaliser la profondeur d\'expansion et l\'indentation'
+      title: '🎨 Thèmes et paramètres',
+      feature1: 'Basculement rapide entre les thèmes clair/sombre',
+      feature2: '5 schémas de couleurs : Bleu océan, Vert forêt, Orange coucher de soleil, Violet lavande, Rouge rubis',
+      feature3: 'Personnaliser les lignes d\'aperçu et la taille d\'indentation',
+      feature4: 'Contrôle flexible de la profondeur d\'expansion (0-5 niveaux ou expansion complète)'
+    },
+    moreFeatures: {
+      title: '🚀 Plus de fonctionnalités',
+      feature1: 'Exporter les résultats filtrés au format JSONL ou JSON',
+      feature2: 'Chargement par lots avec support "Charger plus"',
+      feature3: 'Défilement rapide vers le haut/bas',
+      feature4: 'Support multilingue : Chinois, Anglais, Allemand, Français, Espagnol'
     },
     moreInfo: {
-      title: 'Plus d\'informations',
+      title: '📖 Plus d\'informations',
       content: 'Visitez GitHub Wiki pour une documentation détaillée'
     }
   },

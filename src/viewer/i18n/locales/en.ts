@@ -58,33 +58,42 @@ export default {
     title: 'Smart JSONL Viewer Help',
     close: 'Close',
     fileLoading: {
-      title: 'File Loading',
-      feature1: 'Support 100MB+ large files with fast loading',
-      feature2: 'Drag & drop files to open',
-      feature3: 'Auto-detect .jsonl, .ndjson files'
+      title: '📁 File Loading',
+      feature1: 'Quickly open 100MB+ large files with background async loading',
+      feature2: 'Support drag & drop, click to select, or paste content',
+      feature3: 'Auto-detect .jsonl, .json, .ndjson formats'
     },
     searchFilter: {
-      title: 'Search & Filter',
-      feature1: 'Keyword Search: Support multiple keywords separated by spaces',
-      feature2: 'Regular Expression: Click .* to enable regex mode',
-      feature3: 'JSON Path: Use path syntax like user.name',
-      feature4: 'Type Filter: Filter by string, number, boolean, object, array'
+      title: '🔍 Search & Filter',
+      feature1: 'Filter scope: By line / By node',
+      feature2: 'Match mode: Fuzzy / Exact / JSONPath',
+      feature3: 'JSONPath examples: $.user.name, $.data[0], $..content',
+      feature4: 'Search in decoded content',
+      feature5: 'Search history for quick repeated queries'
     },
     smartDecoding: {
-      title: 'Smart Decoding',
-      feature1: 'Auto-decode nested JSON strings',
-      feature2: 'URL encoding/decoding',
-      feature3: 'Base64 encoding/decoding',
+      title: '✨ Smart Decoding',
+      feature1: 'Auto-detect and decode nested JSON strings',
+      feature2: 'Base64 encoding/decoding',
+      feature3: 'URL encoding/decoding',
       feature4: 'Click 👁 icon next to fields to view decoded content'
     },
     themesSettings: {
-      title: 'Themes & Settings',
-      feature1: 'Light/Dark theme toggle',
-      feature2: 'Multiple color schemes (click palette icon)',
-      feature3: 'Customize expand depth and indentation'
+      title: '🎨 Themes & Settings',
+      feature1: 'Quick toggle between light/dark themes',
+      feature2: '5 color schemes: Ocean Blue, Forest Green, Sunset Orange, Lavender Purple, Ruby Red',
+      feature3: 'Customize preview lines and indent size',
+      feature4: 'Flexible expand depth control (0-5 levels or full expand)'
+    },
+    moreFeatures: {
+      title: '🚀 More Features',
+      feature1: 'Export filtered results as JSONL or JSON format',
+      feature2: 'Batch loading with "Load More" support',
+      feature3: 'Quick scroll to top/bottom',
+      feature4: 'Multi-language support: Chinese, English, German, French, Spanish'
     },
     moreInfo: {
-      title: 'More Information',
+      title: '📖 More Information',
       content: 'Visit GitHub Wiki for detailed documentation'
     }
   },

@@ -215,51 +215,63 @@
     <div v-if="showHelpDialog" class="help-dialog-overlay" @click="showHelpDialog = false">
       <div class="help-dialog" @click.stop>
         <div class="help-header">
-          <h2>Smart JSONL Viewer 帮助</h2>
+          <h2>{{ t('help.title') }}</h2>
           <button class="help-close" @click="showHelpDialog = false">✕</button>
         </div>
         <div class="help-content">
           <section class="help-section">
-            <h3>📁 文件加载</h3>
+            <h3>{{ t('help.fileLoading.title') }}</h3>
             <ul>
-              <li>支持 100MB+ 大文件快速加载</li>
-              <li>拖拽文件到页面即可打开</li>
-              <li>自动识别 .jsonl、.ndjson 文件</li>
+              <li>{{ t('help.fileLoading.feature1') }}</li>
+              <li>{{ t('help.fileLoading.feature2') }}</li>
+              <li>{{ t('help.fileLoading.feature3') }}</li>
             </ul>
           </section>
 
           <section class="help-section">
-            <h3>🔍 搜索与过滤</h3>
+            <h3>{{ t('help.searchFilter.title') }}</h3>
             <ul>
-              <li><strong>关键字搜索：</strong>支持多个关键字，用空格分隔</li>
-              <li><strong>正则表达式：</strong>点击 <code>.*</code> 启用正则模式</li>
-              <li><strong>JSON 路径：</strong>使用路径语法如 <code>user.name</code></li>
-              <li><strong>类型过滤：</strong>筛选字符串、数字、布尔、对象、数组</li>
+              <li>{{ t('help.searchFilter.feature1') }}</li>
+              <li>{{ t('help.searchFilter.feature2') }}</li>
+              <li>{{ t('help.searchFilter.feature3') }}</li>
+              <li>{{ t('help.searchFilter.feature4') }}</li>
+              <li>{{ t('help.searchFilter.feature5') }}</li>
             </ul>
           </section>
 
           <section class="help-section">
-            <h3>✨ 智能解码</h3>
+            <h3>{{ t('help.smartDecoding.title') }}</h3>
             <ul>
-              <li>自动解码嵌套的 JSON 字符串</li>
-              <li>URL 编码/解码</li>
-              <li>Base64 编码/解码</li>
-              <li>点击字段旁的 <code>👁</code> 图标查看解码内容</li>
+              <li>{{ t('help.smartDecoding.feature1') }}</li>
+              <li>{{ t('help.smartDecoding.feature2') }}</li>
+              <li>{{ t('help.smartDecoding.feature3') }}</li>
+              <li>{{ t('help.smartDecoding.feature4') }}</li>
             </ul>
           </section>
 
           <section class="help-section">
-            <h3>🎨 主题与设置</h3>
+            <h3>{{ t('help.themesSettings.title') }}</h3>
             <ul>
-              <li>亮色/暗色主题切换</li>
-              <li>多种配色方案（点击调色板图标）</li>
-              <li>自定义展开深度和缩进</li>
+              <li>{{ t('help.themesSettings.feature1') }}</li>
+              <li>{{ t('help.themesSettings.feature2') }}</li>
+              <li>{{ t('help.themesSettings.feature3') }}</li>
+              <li>{{ t('help.themesSettings.feature4') }}</li>
             </ul>
           </section>
 
           <section class="help-section">
-            <h3>📖 更多信息</h3>
-            <p>访问 <a href="https://github.com/kylixs/smart-jsonl-viewer" target="_blank" rel="noopener noreferrer">GitHub Wiki</a> 查看详细文档</p>
+            <h3>{{ t('help.moreFeatures.title') }}</h3>
+            <ul>
+              <li>{{ t('help.moreFeatures.feature1') }}</li>
+              <li>{{ t('help.moreFeatures.feature2') }}</li>
+              <li>{{ t('help.moreFeatures.feature3') }}</li>
+              <li>{{ t('help.moreFeatures.feature4') }}</li>
+            </ul>
+          </section>
+
+          <section class="help-section">
+            <h3>{{ t('help.moreInfo.title') }}</h3>
+            <p>{{ t('help.moreInfo.content') }} <a href="https://github.com/kylixs/smart-jsonl-viewer" target="_blank" rel="noopener noreferrer">GitHub Wiki</a></p>
           </section>
         </div>
       </div>
@@ -294,7 +306,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-// import { useI18n } from 'vue-i18n'
+import { useI18n } from 'vue-i18n'
 import { useJsonlStore } from './stores/jsonlStore'
 import SearchFilter from './components/SearchFilter.vue'
 import JsonLineItem from './components/JsonLineItem.vue'
@@ -302,8 +314,7 @@ import { exportToJsonLines, exportToJson } from './utils/parser'
 import { getSettings, saveSettings } from './utils/settings'
 import { availableLocales, setLocale, getLocale } from './i18n'
 
-// const { t } = useI18n()
-// TODO: 将所有硬编码文本替换为 t() 函数调用
+const { t } = useI18n()
 
 const store = useJsonlStore()
 const isDragging = ref(false)

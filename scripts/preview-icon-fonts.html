@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>图标字体预览</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .icons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+      margin-top: 20px;
+    }
+    .icon-item {
+      text-align: center;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .icon-item:hover {
+      border-color: #4CAF50;
+      background: #f0f8f0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+    }
+    .icon-item.selected {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+    }
+    .icon-preview {
+      width: 128px;
+      height: 128px;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-label {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+      font-size: 16px;
+    }
+    .icon-description {
+      color: #666;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+    .select-button {
+      margin-top: 30px;
+      text-align: center;
+    }
+    .select-button button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .select-button button:hover {
+      background: #45a049;
+    }
+    .select-button button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .selected-info {
+      margin-top: 15px;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>选择图标字母字体</h1>
+    <p class="subtitle">点击您喜欢的字体风格，将自动生成图标</p>
+
+    <div class="icons" id="icons-container"></div>
+
+    <div class="select-button">
+      <button id="generate-btn" disabled>生成选中的图标</button>
+      <div class="selected-info" id="selected-info"></div>
+    </div>
+  </div>
+
+  <script>
+    const fontOptions = [
+      {
+        id: 'georgia-italic',
+        name: 'Georgia 斜体',
+        description: '经典衬线字体，优雅流畅，具有书卷气息',
+        family: 'Georgia, serif',
+        style: 'italic',
+        weight: 'normal',
+        size: 42
+      },
+      {
+        id: 'times-italic',
+        name: 'Times New Roman 斜体',
+        description: '传统衬线字体，正式典雅，专业感强',
+        family: 'Times New Roman, Times, serif',
+        style: 'italic',
+        weight: 'normal',
+        size: 44
+      },
+      {
+        id: 'palatino-italic',
+        name: 'Palatino 斜体',
+        description: '文艺复兴风格字体，书法感强，艺术气息浓厚',
+        family: 'Palatino, "Palatino Linotype", "Book Antiqua", serif',
+        style: 'italic',
+        weight: 'normal',
+        size: 44
+      },
+      {
+        id: 'courier-bold',
+        name: 'Courier 粗体',
+        description: '等宽字体，代码风格，技术感十足',
+        family: 'Courier New, Courier, monospace',
+        style: 'normal',
+        weight: 'bold',
+        size: 46
+      },
+      {
+        id: 'verdana-bold',
+        name: 'Verdana 粗体',
+        description: '现代无衬线字体，圆润饱满，易读性强',
+        family: 'Verdana, Geneva, sans-serif',
+        style: 'normal',
+        weight: 'bold',
+        size: 40
+      },
+      {
+        id: 'trebuchet-italic',
+        name: 'Trebuchet MS 斜体',
+        description: '人文主义字体，现代感强，友好温和',
+        family: 'Trebuchet MS, sans-serif',
+        style: 'italic',
+        weight: 'bold',
+        size: 42
+      },
+      {
+        id: 'garamond-italic',
+        name: 'Garamond 斜体',
+        description: '古典法式字体，精致优雅，文学气息',
+        family: 'Garamond, "Adobe Garamond Pro", serif',
+        style: 'italic',
+        weight: 'normal',
+        size: 46
+      },
+      {
+        id: 'optima-normal',
+        name: 'Optima 正体',
+        description: '人文主义字体，简洁大方，现代经典',
+        family: 'Optima, "Optima LT Std", sans-serif',
+        style: 'normal',
+        weight: 'normal',
+        size: 44
+      }
+    ];
+
+    let selectedFont = null;
+
+    function createIconSVG(font) {
+      return `<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient-${font.id}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="19.2" fill="url(#bgGradient-${font.id})"/>
+  <text x="32" y="64" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">{</text>
+  <text x="64" y="64" font-family="${font.family}" font-size="${font.size}" font-weight="${font.weight}" font-style="${font.style}" fill="white" fill-opacity="0.95" text-anchor="middle" dominant-baseline="middle">L</text>
+  <text x="96" y="64" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">}</text>
+</svg>`;
+    }
+
+    const container = document.getElementById('icons-container');
+    const generateBtn = document.getElementById('generate-btn');
+    const selectedInfo = document.getElementById('selected-info');
+
+    fontOptions.forEach(font => {
+      const item = document.createElement('div');
+      item.className = 'icon-item';
+      item.dataset.fontId = font.id;
+
+      const preview = document.createElement('div');
+      preview.className = 'icon-preview';
+      preview.innerHTML = createIconSVG(font);
+
+      const label = document.createElement('div');
+      label.className = 'icon-label';
+      label.textContent = font.name;
+
+      const description = document.createElement('div');
+      description.className = 'icon-description';
+      description.textContent = font.description;
+
+      item.appendChild(preview);
+      item.appendChild(label);
+      item.appendChild(description);
+
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.icon-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        selectedFont = font;
+        generateBtn.disabled = false;
+        selectedInfo.textContent = `已选择: ${font.name}`;
+      });
+
+      container.appendChild(item);
+    });
+
+    generateBtn.addEventListener('click', () => {
+      if (!selectedFont) return;
+
+      alert(`已选择: ${selectedFont.name}\n\n请在控制台查看字体配置信息，稍后将自动更新图标。`);
+
+      console.log('选中的字体配置:');
+      console.log(`family: '${selectedFont.family}'`);
+      console.log(`style: '${selectedFont.style}'`);
+      console.log(`weight: '${selectedFont.weight}'`);
+      console.log(`size: ${selectedFont.size}`);
+      console.log(`\n完整代码:`);
+      console.log(`font-family="${selectedFont.family}" font-size="${selectedFont.size}" font-weight="${selectedFont.weight}" font-style="${selectedFont.style}"`);
+    });
+  </script>
+</body>
+</html>

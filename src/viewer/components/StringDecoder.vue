@@ -27,7 +27,7 @@
             🔍
           </button>
           <button class="action-btn" @click="toggleMode" :title="toggleTitle">
-            {{ displayMode === 'original' ? '🔄' : '↩️' }}
+            {{ displayMode === 'original' ? '👁' : '↩️' }}
           </button>
           <button
             v-if="displayMode === 'decoded'"

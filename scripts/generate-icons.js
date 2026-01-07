@@ -25,16 +25,18 @@ function createSolidSVG(size) {
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="19.2" fill="url(#bgGradient)"/>
-  <text x="46" y="85" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">{</text>
-  <text x="82" y="85" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">}</text>
+  <text x="32" y="64" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">{</text>
+  <text x="64" y="64" font-family="Georgia, serif" font-size="42" font-weight="normal" font-style="italic" fill="white" fill-opacity="0.95" text-anchor="middle" dominant-baseline="middle">L</text>
+  <text x="96" y="64" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">}</text>
 </svg>`;
 }
 
 // 创建透明背景的 SVG（用于应用内）
 function createTransparentSVG(size) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <text x="46" y="85" font-family="Arial, sans-serif" font-size="76" font-weight="bold" fill="white" stroke="rgba(0,0,0,0.15)" stroke-width="5" text-anchor="middle" dominant-baseline="middle">{</text>
-  <text x="82" y="85" font-family="Arial, sans-serif" font-size="76" font-weight="bold" fill="white" stroke="rgba(0,0,0,0.15)" stroke-width="5" text-anchor="middle" dominant-baseline="middle">}</text>
+  <text x="32" y="64" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="white" stroke="rgba(0,0,0,0.15)" stroke-width="5" text-anchor="middle" dominant-baseline="middle">{</text>
+  <text x="64" y="64" font-family="Georgia, serif" font-size="44" font-weight="normal" font-style="italic" fill="white" fill-opacity="0.95" stroke="rgba(0,0,0,0.12)" stroke-width="3" text-anchor="middle" dominant-baseline="middle">L</text>
+  <text x="96" y="64" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="white" stroke="rgba(0,0,0,0.15)" stroke-width="5" text-anchor="middle" dominant-baseline="middle">}</text>
 </svg>`;
 }
 

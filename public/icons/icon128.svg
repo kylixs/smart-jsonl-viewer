@@ -6,6 +6,7 @@
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="19.2" fill="url(#bgGradient)"/>
-  <text x="46" y="85" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">{</text>
-  <text x="82" y="85" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">}</text>
+  <text x="32" y="64" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">{</text>
+  <text x="64" y="64" font-family="Georgia, serif" font-size="42" font-weight="normal" font-style="italic" fill="white" fill-opacity="0.95" text-anchor="middle" dominant-baseline="middle">L</text>
+  <text x="96" y="64" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">}</text>
 </svg>

@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "JSONL Viewer",
+  "name": "Smart JSONL Viewer",
   "version": "1.1.0",
-  "description": "智能 JSONL 查看器，支持字符串解码和高级过滤",
+  "description": "Quickly open 100MB+ JSONL files with smart decoding of nested JSON/Markdown/Code, advanced filtering (fuzzy/exact/jsonpath), multiple themes",
   "icons": {
-    "16": "icons/icon16.svg",
-    "32": "icons/icon32.svg",
-    "48": "icons/icon48.svg",
-    "128": "icons/icon128.svg"
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "permissions": [
     "storage",
@@ -35,11 +35,11 @@
   ],
   "action": {
     "default_icon": {
-      "16": "icons/icon16.svg",
-      "32": "icons/icon32.svg",
-      "48": "icons/icon48.svg",
-      "128": "icons/icon128.svg"
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     },
-    "default_title": "JSONL Viewer"
+    "default_title": "Smart JSONL Viewer"
   }
 }

@@ -23,6 +23,7 @@
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.0.3",
     "@vitejs/plugin-vue": "^6.0.3",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
     "vue-tsc": "^3.2.1"
@@ -33,6 +34,7 @@
     "mermaid": "^11.12.2",
     "pinia": "^3.0.4",
     "shiki": "^3.20.0",
-    "vue": "^3.5.26"
+    "vue": "^3.5.26",
+    "vue-i18n": "^11.2.8"
   }
 }

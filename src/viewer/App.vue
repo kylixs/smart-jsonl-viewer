@@ -5,12 +5,25 @@
        @dragleave="handleGlobalDragLeave">
     <header class="app-header">
       <div class="app-title-section">
-        <h1 class="app-title">JSONL Viewer</h1>
+        <svg class="app-icon" width="40" height="40" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+          <text x="32" y="64" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="white" stroke="rgba(0,0,0,0.15)" stroke-width="5" text-anchor="middle" dominant-baseline="middle">{</text>
+          <text x="64" y="64" font-family="Georgia, serif" font-size="44" font-weight="normal" font-style="italic" fill="white" fill-opacity="0.95" stroke="rgba(0,0,0,0.12)" stroke-width="3" text-anchor="middle" dominant-baseline="middle">L</text>
+          <text x="96" y="64" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="white" stroke="rgba(0,0,0,0.15)" stroke-width="5" text-anchor="middle" dominant-baseline="middle">}</text>
+        </svg>
+        <h1 class="app-title">Smart JSONL Viewer</h1>
         <span v-if="currentFileName" class="current-file-name">{{ currentFileName }}</span>
       </div>
       <div class="app-actions">
         <button class="action-btn" @click="goToHome" title="返回首页" v-if="store.totalLines > 0">
           🏠
+        </button>
+        <button class="action-btn" @click="openGithub" title="GitHub 项目">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+        </button>
+        <button class="action-btn" @click="toggleHelpDialog" title="帮助">
+          ❓
         </button>
         <button class="action-btn" @click="toggleTheme" :title="themeTitle">
           {{ store.isDark ? '☀️' : '🌙' }}
@@ -180,6 +193,60 @@
       {{ error }}
     </div>
 
+    <!-- 帮助对话框 -->
+    <div v-if="showHelpDialog" class="help-dialog-overlay" @click="showHelpDialog = false">
+      <div class="help-dialog" @click.stop>
+        <div class="help-header">
+          <h2>Smart JSONL Viewer 帮助</h2>
+          <button class="help-close" @click="showHelpDialog = false">✕</button>
+        </div>
+        <div class="help-content">
+          <section class="help-section">
+            <h3>📁 文件加载</h3>
+            <ul>
+              <li>支持 100MB+ 大文件快速加载</li>
+              <li>拖拽文件到页面即可打开</li>
+              <li>自动识别 .jsonl、.ndjson 文件</li>
+            </ul>
+          </section>
+
+          <section class="help-section">
+            <h3>🔍 搜索与过滤</h3>
+            <ul>
+              <li><strong>关键字搜索：</strong>支持多个关键字，用空格分隔</li>
+              <li><strong>正则表达式：</strong>点击 <code>.*</code> 启用正则模式</li>
+              <li><strong>JSON 路径：</strong>使用路径语法如 <code>user.name</code></li>
+              <li><strong>类型过滤：</strong>筛选字符串、数字、布尔、对象、数组</li>
+            </ul>
+          </section>
+
+          <section class="help-section">
+            <h3>✨ 智能解码</h3>
+            <ul>
+              <li>自动解码嵌套的 JSON 字符串</li>
+              <li>URL 编码/解码</li>
+              <li>Base64 编码/解码</li>
+              <li>点击字段旁的 <code>👁</code> 图标查看解码内容</li>
+            </ul>
+          </section>
+
+          <section class="help-section">
+            <h3>🎨 主题与设置</h3>
+            <ul>
+              <li>亮色/暗色主题切换</li>
+              <li>多种配色方案（点击调色板图标）</li>
+              <li>自定义展开深度和缩进</li>
+            </ul>
+          </section>
+
+          <section class="help-section">
+            <h3>📖 更多信息</h3>
+            <p>访问 <a href="https://github.com/kylixs/smart-jsonl-viewer" target="_blank" rel="noopener noreferrer">GitHub Wiki</a> 查看详细文档</p>
+          </section>
+        </div>
+      </div>
+    </div>
+
     <!-- 滚动按钮 -->
     <div v-if="store.totalLines > 0" class="scroll-buttons">
       <button v-if="!isAtTop" class="scroll-btn scroll-to-top" @click="scrollToTop" title="到顶部">
@@ -222,6 +289,7 @@ const showPasteDialog = ref(false)
 const pasteContent = ref('')
 const showThemeMenu = ref(false)
 const showSettingsPanel = ref(false)
+const showHelpDialog = ref(false)
 const selectedMaxLines = ref(10)
 const selectedIndentSize = ref(2)
 
@@ -438,6 +506,14 @@ async function loadFile(file: File) {
 function toggleTheme() {
   store.toggleTheme()
   applyTheme()
+}
+
+function toggleHelpDialog() {
+  showHelpDialog.value = !showHelpDialog.value
+}
+
+function openGithub() {
+  window.open('https://github.com/kylixs/smart-jsonl-viewer', '_blank', 'noopener,noreferrer')
 }
 
 function applyTheme() {
@@ -680,7 +756,14 @@ body {
 .app-title-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
+}
+
+.app-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .app-title {
@@ -1748,5 +1831,169 @@ body {
 
 #app.dark .drag-overlay-content p {
   color: #999;
+}
+
+/* 帮助对话框 */
+.help-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.help-dialog {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+.help-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.help-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.help-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.help-close:hover {
+  color: #333;
+}
+
+.help-content {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: var(--theme-primary);
+  font-weight: 600;
+}
+
+.help-section ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.help-section li {
+  margin: 8px 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.help-section p {
+  margin: 8px 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.help-section code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #e91e63;
+}
+
+.help-section a {
+  color: var(--theme-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.help-section a:hover {
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 暗色主题 */
+#app.dark .help-dialog {
+  background: #2a2a2a;
+}
+
+#app.dark .help-header {
+  border-bottom-color: #444;
+}
+
+#app.dark .help-header h2 {
+  color: #ddd;
+}
+
+#app.dark .help-close {
+  color: #999;
+}
+
+#app.dark .help-close:hover {
+  color: #ddd;
+}
+
+#app.dark .help-section li,
+#app.dark .help-section p {
+  color: #bbb;
+}
+
+#app.dark .help-section code {
+  background: #3a3a3a;
+  color: #ff6b9d;
 }
 </style>

@@ -166,5 +166,27 @@ export default {
   language: {
     select: '选择语言',
     current: '当前语言'
+  },
+  decoder: {
+    viewFull: '查看完整内容',
+    copied: '已复制!',
+    copyDecoded: '复制解码内容',
+    copyFailed: '复制失败',
+    title: '解码内容',
+    originalContent: '原始内容',
+    markdownPreview: 'Markdown 预览',
+    showToc: '显示目录',
+    hideToc: '隐藏目录',
+    selectLanguage: '选择或搜索语言...',
+    searchLanguageHint: '选择或输入语言名称进行搜索',
+    autoDetectLanguage: '自动检测编程语言',
+    selectTheme: '选择代码高亮主题',
+    showDecoded: '显示解码后的内容',
+    showOriginal: '显示原始内容',
+    truncated: '（已省略 {count} 行）',
+    noMatchingLanguage: '未找到匹配的语言',
+    themeLabel: '配色主题：',
+    loadingHighlight: '正在加载代码高亮...',
+    toc: '目录'
   }
 }

@@ -166,5 +166,27 @@ export default {
   language: {
     select: '選擇語言',
     current: '目前語言'
+  },
+  decoder: {
+    viewFull: '檢視完整內容',
+    copied: '已複製!',
+    copyDecoded: '複製解碼內容',
+    copyFailed: '複製失敗',
+    title: '解碼內容',
+    originalContent: '原始內容',
+    markdownPreview: 'Markdown 預覽',
+    showToc: '顯示目錄',
+    hideToc: '隱藏目錄',
+    selectLanguage: '選擇或搜尋語言...',
+    searchLanguageHint: '選擇或輸入語言名稱進行搜尋',
+    autoDetectLanguage: '自動偵測程式語言',
+    selectTheme: '選擇程式碼醒目提示主題',
+    showDecoded: '顯示解碼後的內容',
+    showOriginal: '顯示原始內容',
+    truncated: '（已省略 {count} 行）',
+    noMatchingLanguage: '未找到匹配的語言',
+    themeLabel: '配色主題：',
+    loadingHighlight: '正在載入程式碼醒目提示...',
+    toc: '目錄'
   }
 }

@@ -13,7 +13,7 @@
             </span>
             <span v-else class="value-string multiline">
               <AnsiText :text="displayedValue" />
-              <span v-if="isTruncated" class="truncate-hint" @click="showModal = true">（已省略 {{ totalLines - store.maxDisplayLines }} 行）</span>
+              <span v-if="isTruncated" class="truncate-hint" @click="showModal = true">{{ t('decoder.truncated', { count: totalLines - store.maxDisplayLines }) }}</span>
             </span>
           </span>
         </div>
@@ -22,7 +22,7 @@
             v-if="displayMode === 'decoded' && (isTruncated || decodedType === 'json')"
             class="action-btn"
             @click="showModal = true"
-            title="查看完整内容"
+            :title="t('decoder.viewFull')"
           >
             🔍
           </button>
@@ -33,7 +33,7 @@
             v-if="displayMode === 'decoded'"
             class="action-btn"
             @click="copyDecodedContent"
-            :title="copySuccess ? '已复制!' : copyError || '复制解码内容'"
+            :title="copySuccess ? t('decoder.copied') : copyError || t('decoder.copyDecoded')"
             :class="{ error: copyError }"
           >
             {{ copySuccess ? '✓' : copyError ? '✗' : '📋' }}
@@ -48,7 +48,7 @@
     <div v-if="showModal" class="modal-overlay" @click="showModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>解码内容</h3>
+          <h3>{{ t('decoder.title') }}</h3>
 
           <!-- Tab 切换栏 - 放在标题右侧 -->
           <div v-if="isMarkdownContent && decodedType === 'string'" class="modal-tabs">
@@ -57,23 +57,23 @@
               :class="{ active: modalViewMode === 'raw' }"
               @click="modalViewMode = 'raw'"
             >
-              原始内容
+              {{ t('decoder.originalContent') }}
             </button>
             <button
               class="modal-tab"
               :class="{ active: modalViewMode === 'markdown' }"
               @click="modalViewMode = 'markdown'"
             >
-              Markdown 预览
+              {{ t('decoder.markdownPreview') }}
             </button>
             <!-- 显示目录链接 -->
             <button
               v-if="modalViewMode === 'markdown' && shouldShowToc && !showToc"
               class="toc-toggle-link"
               @click="showToc = true"
-              title="显示目录"
+              :title="t('decoder.showToc')"
             >
-              显示目录
+              {{ t('decoder.showToc') }}
             </button>
           </div>
 
@@ -101,8 +101,8 @@
                     @blur="handleLanguageSelectorBlur"
                     @input="showLanguageDropdown = true"
                     class="language-search-input"
-                    placeholder="选择或搜索语言..."
-                    title="选择或输入语言名称进行搜索"
+                    :placeholder="t('decoder.selectLanguage')"
+                    :title="t('decoder.searchLanguageHint')"
                   />
                   <span class="dropdown-arrow" @mousedown.prevent="toggleDropdown">▼</span>
                   <div v-if="showLanguageDropdown" class="language-dropdown">
@@ -116,26 +116,26 @@
                       {{ lang.label }}
                     </div>
                     <div v-if="filteredLanguages.length === 0" class="language-option-empty">
-                      未找到匹配的语言
+                      {{ t('decoder.noMatchingLanguage') }}
                     </div>
                   </div>
                 </div>
                 <button
                   class="auto-detect-btn"
                   @click="autoDetectLanguage"
-                  title="自动检测编程语言"
+                  :title="t('decoder.autoDetectLanguage')"
                 >
-                  自动检测
+                  {{ t('decoder.autoDetectLanguage') }}
                 </button>
 
                 <div class="theme-selector-divider"></div>
 
-                <label class="code-toolbar-label">配色主题：</label>
+                <label class="code-toolbar-label">{{ t('decoder.themeLabel') }}</label>
                 <select
                   v-model="selectedCodeTheme"
                   @change="handleCodeThemeChange"
                   class="theme-select"
-                  title="选择代码高亮主题"
+                  :title="t('decoder.selectTheme')"
                 >
                   <option v-for="theme in availableCodeThemes" :key="theme.id" :value="theme.id">
                     {{ theme.name }}
@@ -144,7 +144,7 @@
               </div>
 
               <!-- 代码高亮显示或普通文本显示 -->
-              <div v-if="isCodeContent && !highlightedCode" class="code-loading">正在加载代码高亮...</div>
+              <div v-if="isCodeContent && !highlightedCode" class="code-loading">{{ t('decoder.loadingHighlight') }}</div>
               <pre v-if="isCodeContent && highlightedCode" class="code-highlight" v-html="highlightedCode"></pre>
               <pre v-if="!isCodeContent" class="modal-text"><AnsiText :text="decodedValue" /></pre>
             </div>
@@ -154,8 +154,8 @@
               <!-- 目录导航 -->
               <aside v-if="shouldShowToc && showToc" class="markdown-toc">
                 <div class="toc-header">
-                  <span class="toc-title">目录</span>
-                  <button class="toc-toggle" @click="showToc = false" title="隐藏目录">✕</button>
+                  <span class="toc-title">{{ t('decoder.toc') }}</span>
+                  <button class="toc-toggle" @click="showToc = false" :title="t('decoder.hideToc')">✕</button>
                 </div>
                 <nav class="toc-nav">
                   <a
@@ -182,6 +182,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import JsonTree from './JsonTree.vue'
 import AnsiText from './AnsiText.vue'
 import { smartDecode, isDecodable as checkDecodable } from '../utils/decoder'
@@ -197,6 +198,8 @@ import {
   saveCodeThemePreference,
   loadCodeThemePreference
 } from '../utils/codeThemes'
+
+const { t } = useI18n()
 
 interface Props {
   value: any
@@ -343,7 +346,7 @@ const decodedData = computed(() => {
 
 // 切换按钮提示
 const toggleTitle = computed(() => {
-  return displayMode.value === 'original' ? '显示解码后的内容' : '显示原始内容'
+  return displayMode.value === 'original' ? t('decoder.showDecoded') : t('decoder.showOriginal')
 })
 
 // 检测解码后的内容是否为 Markdown

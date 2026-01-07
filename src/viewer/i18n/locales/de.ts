@@ -166,5 +166,27 @@ export default {
   language: {
     select: 'Sprache auswählen',
     current: 'Aktuelle Sprache'
+  },
+  decoder: {
+    viewFull: 'Vollständigen Inhalt anzeigen',
+    copied: 'Kopiert!',
+    copyDecoded: 'Dekodierten Inhalt kopieren',
+    copyFailed: 'Kopieren fehlgeschlagen',
+    title: 'Dekodierter Inhalt',
+    originalContent: 'Originalinhalt',
+    markdownPreview: 'Markdown-Vorschau',
+    showToc: 'Inhaltsverzeichnis anzeigen',
+    hideToc: 'Inhaltsverzeichnis ausblenden',
+    selectLanguage: 'Sprache auswählen oder suchen...',
+    searchLanguageHint: 'Sprache auswählen oder Namen eingeben zum Suchen',
+    autoDetectLanguage: 'Programmiersprache automatisch erkennen',
+    selectTheme: 'Code-Highlight-Thema auswählen',
+    showDecoded: 'Dekodierten Inhalt anzeigen',
+    showOriginal: 'Originalinhalt anzeigen',
+    truncated: '({count} Zeilen weggelassen)',
+    noMatchingLanguage: 'Keine passende Sprache gefunden',
+    themeLabel: 'Thema:',
+    loadingHighlight: 'Code-Hervorhebung wird geladen...',
+    toc: 'Inhaltsverzeichnis'
   }
 }

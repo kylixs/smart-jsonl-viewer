@@ -166,5 +166,27 @@ export default {
   language: {
     select: 'Select Language',
     current: 'Current Language'
+  },
+  decoder: {
+    viewFull: 'View Full Content',
+    copied: 'Copied!',
+    copyDecoded: 'Copy Decoded Content',
+    copyFailed: 'Copy Failed',
+    title: 'Decoded Content',
+    originalContent: 'Original Content',
+    markdownPreview: 'Markdown Preview',
+    showToc: 'Show Table of Contents',
+    hideToc: 'Hide Table of Contents',
+    selectLanguage: 'Select or search language...',
+    searchLanguageHint: 'Select or enter language name to search',
+    autoDetectLanguage: 'Auto-detect programming language',
+    selectTheme: 'Select code highlight theme',
+    showDecoded: 'Show decoded content',
+    showOriginal: 'Show original content',
+    truncated: '({count} lines omitted)',
+    noMatchingLanguage: 'No matching language found',
+    themeLabel: 'Theme:',
+    loadingHighlight: 'Loading code highlighting...',
+    toc: 'Table of Contents'
   }
 }

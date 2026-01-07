@@ -94,7 +94,8 @@ export default {
     },
     moreInfo: {
       title: '📖 Weitere Informationen',
-      content: 'Besuchen Sie GitHub Wiki für detaillierte Dokumentation'
+      content: 'Besuchen Sie GitHub für detaillierte Dokumentation, Problem melden oder beitragen',
+      github: 'GitHub-Projekt'
     }
   },
   loading: {

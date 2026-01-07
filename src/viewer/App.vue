@@ -17,11 +17,6 @@
         <button class="action-btn" @click="goToHome" title="返回首页" v-if="store.totalLines > 0">
           🏠
         </button>
-        <button class="action-btn" @click="openGithub" title="GitHub 项目">
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-          </svg>
-        </button>
         <button class="action-btn" @click="toggleHelpDialog" :title="t('app.help')">
           ℹ️
         </button>
@@ -271,7 +266,16 @@
 
           <section class="help-section">
             <h3>{{ t('help.moreInfo.title') }}</h3>
-            <p>{{ t('help.moreInfo.content') }} <a href="https://github.com/kylixs/smart-jsonl-viewer" target="_blank" rel="noopener noreferrer">GitHub Wiki</a></p>
+            <p>
+              {{ t('help.moreInfo.content') }}
+              <br>
+              <a href="https://github.com/kylixs/smart-jsonl-viewer" target="_blank" rel="noopener noreferrer" class="github-link">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom; margin-right: 4px;">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+                {{ t('help.moreInfo.github') }}
+              </a>
+            </p>
           </section>
         </div>
       </div>
@@ -547,10 +551,6 @@ function toggleTheme() {
 
 function toggleHelpDialog() {
   showHelpDialog.value = !showHelpDialog.value
-}
-
-function openGithub() {
-  window.open('https://github.com/kylixs/smart-jsonl-viewer', '_blank', 'noopener,noreferrer')
 }
 
 function applyTheme() {
@@ -2083,6 +2083,24 @@ body {
 
 .help-section a:hover {
   text-decoration: underline;
+}
+
+.help-section .github-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  margin-top: 12px;
+  background: var(--theme-primary);
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.help-section .github-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-decoration: none;
 }
 
 @keyframes fadeIn {

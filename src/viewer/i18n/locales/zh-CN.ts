@@ -94,7 +94,8 @@ export default {
     },
     moreInfo: {
       title: '📖 更多信息',
-      content: '访问 GitHub Wiki 查看详细文档'
+      content: '访问 GitHub 查看详细文档、提交问题或贡献代码',
+      github: 'GitHub 项目主页'
     }
   },
   loading: {

@@ -30,7 +30,31 @@ export default {
       boolean: 'Boolean',
       object: 'Object',
       array: 'Array'
-    }
+    },
+    clear: 'Clear',
+    viewHistory: 'View search history',
+    history: 'Search History',
+    clearHistory: 'Clear history',
+    delete: 'Delete',
+    filterScope: 'Filter Scope',
+    filterByLine: 'By Line',
+    filterByNode: 'By Node',
+    matchMode: 'Match Mode',
+    fuzzy: 'Fuzzy',
+    fuzzyHint: 'Case-insensitive, contains match',
+    exact: 'Exact',
+    exactHint: 'Case-insensitive, full word match',
+    jsonpathLabel: 'JSONPath',
+    jsonpathHint: 'Use JSONPath expression',
+    searchDecoded: 'Decoded Content',
+    expandDepth: 'Expand Depth',
+    expandAll: 'Expand All',
+    collapseAll: 'Collapse All',
+    expandLevel: 'Expand {level} Level(s)',
+    jsonpathExamples: 'Examples',
+    statsDisplay: 'Displaying',
+    statsOf: '/',
+    statsLines: 'lines'
   },
   settings: {
     title: 'Settings',
@@ -74,7 +98,7 @@ export default {
     smartDecoding: {
       title: '✨ Smart Decoding',
       feature1: 'Auto-decode escape sequences (\\n, \\", \\t, etc.)',
-      feature2: 'Recursively parse nested JSON strings',
+      feature2: 'Parse nested JSON strings',
       feature3: 'JSON/code syntax highlighting, Markdown preview',
       feature4: 'Click 👁 icon next to fields to view decoded content'
     },
@@ -89,8 +113,7 @@ export default {
       title: '🚀 More Features',
       feature1: 'Export filtered results as JSONL or JSON format',
       feature2: 'Batch loading with "Load More" support',
-      feature3: 'Quick scroll to top/bottom',
-      feature4: 'Multi-language support: Chinese, English, German, French, Spanish'
+      feature3: 'Quick scroll to top/bottom'
     },
     moreInfo: {
       title: '📖 More Information',

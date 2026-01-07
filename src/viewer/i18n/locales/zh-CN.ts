@@ -30,7 +30,31 @@ export default {
       boolean: '布尔值',
       object: '对象',
       array: '数组'
-    }
+    },
+    clear: '清空',
+    viewHistory: '查看搜索历史',
+    history: '搜索历史',
+    clearHistory: '清空历史',
+    delete: '删除',
+    filterScope: '过滤范围',
+    filterByLine: '按行',
+    filterByNode: '按节点',
+    matchMode: '匹配模式',
+    fuzzy: '模糊',
+    fuzzyHint: '忽略大小写，包含即匹配',
+    exact: '完全',
+    exactHint: '忽略大小写，完整单词匹配',
+    jsonpathLabel: 'JSONPath',
+    jsonpathHint: '使用 JSONPath 表达式',
+    searchDecoded: '解码内容',
+    expandDepth: '展开深度',
+    expandAll: '全部展开',
+    collapseAll: '全部折叠',
+    expandLevel: '展开{level}层',
+    jsonpathExamples: '示例',
+    statsDisplay: '显示',
+    statsOf: '/',
+    statsLines: '行'
   },
   settings: {
     title: '设置',
@@ -74,7 +98,7 @@ export default {
     smartDecoding: {
       title: '✨ 智能解码',
       feature1: '自动解码转义字符（\\n、\\"、\\t 等）',
-      feature2: '递归解析嵌套的 JSON 字符串',
+      feature2: '解析嵌套的 JSON 字符串',
       feature3: 'JSON/代码语法高亮，Markdown 预览',
       feature4: '点击字段旁的 👁 图标查看解码内容'
     },
@@ -89,8 +113,7 @@ export default {
       title: '🚀 其他功能',
       feature1: '导出过滤结果为 JSONL 或 JSON 格式',
       feature2: '批量加载，支持"加载更多"',
-      feature3: '快速滚动到顶部/底部',
-      feature4: '多语言支持：中文、英语、德语、法语、西班牙语'
+      feature3: '快速滚动到顶部/底部'
     },
     moreInfo: {
       title: '📖 更多信息',

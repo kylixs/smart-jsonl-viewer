@@ -30,7 +30,31 @@ export default {
       boolean: 'Booléen',
       object: 'Objet',
       array: 'Tableau'
-    }
+    },
+    clear: 'Effacer',
+    viewHistory: 'Voir l\'historique de recherche',
+    history: 'Historique de recherche',
+    clearHistory: 'Effacer l\'historique',
+    delete: 'Supprimer',
+    filterScope: 'Portée du filtre',
+    filterByLine: 'Par ligne',
+    filterByNode: 'Par nœud',
+    matchMode: 'Mode de correspondance',
+    fuzzy: 'Floue',
+    fuzzyHint: 'Insensible à la casse, contient la correspondance',
+    exact: 'Exacte',
+    exactHint: 'Insensible à la casse, correspondance de mot complet',
+    jsonpathLabel: 'JSONPath',
+    jsonpathHint: 'Utiliser une expression JSONPath',
+    searchDecoded: 'Contenu décodé',
+    expandDepth: 'Profondeur d\'expansion',
+    expandAll: 'Tout développer',
+    collapseAll: 'Tout réduire',
+    expandLevel: 'Développer {level} niveau(x)',
+    jsonpathExamples: 'Exemples',
+    statsDisplay: 'Affichage',
+    statsOf: '/',
+    statsLines: 'lignes'
   },
   settings: {
     title: 'Paramètres',
@@ -74,7 +98,7 @@ export default {
     smartDecoding: {
       title: '✨ Décodage intelligent',
       feature1: 'Décodage automatique des séquences d\'échappement (\\n, \\", \\t, etc.)',
-      feature2: 'Analyse récursive des chaînes JSON imbriquées',
+      feature2: 'Analyse des chaînes JSON imbriquées',
       feature3: 'Coloration syntaxique JSON/code, aperçu Markdown',
       feature4: 'Cliquez sur l\'icône 👁 à côté des champs pour afficher le contenu décodé'
     },
@@ -89,8 +113,7 @@ export default {
       title: '🚀 Plus de fonctionnalités',
       feature1: 'Exporter les résultats filtrés au format JSONL ou JSON',
       feature2: 'Chargement par lots avec support "Charger plus"',
-      feature3: 'Défilement rapide vers le haut/bas',
-      feature4: 'Support multilingue : Chinois, Anglais, Allemand, Français, Espagnol'
+      feature3: 'Défilement rapide vers le haut/bas'
     },
     moreInfo: {
       title: '📖 Plus d\'informations',

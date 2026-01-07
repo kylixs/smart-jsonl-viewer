@@ -6,7 +6,7 @@
         v-model="keyword"
         type="text"
         class="search-input"
-        placeholder="输入关键字搜索..."
+        :placeholder="t('search.placeholder')"
         @input="handleSearch"
         @focus="showHistoryDropdown = true"
         @blur="handleInputBlur"
@@ -14,23 +14,23 @@
         @keydown.up.prevent="navigateHistory(-1)"
         @keydown.enter="selectCurrentHistory"
       />
-      <button v-if="keyword" class="clear-btn" @click="clearSearch" title="清空">
+      <button v-if="keyword" class="clear-btn" @click="clearSearch" :title="t('search.clear')">
         ✕
       </button>
       <button
         v-if="!keyword && searchHistory.length > 0"
         class="history-arrow-btn"
         @mousedown.prevent="toggleHistoryDropdown"
-        title="查看搜索历史"
+        :title="t('search.viewHistory')"
       >
         ▼
       </button>
       <!-- 搜索历史下拉列表 -->
       <div v-if="showHistoryDropdown && searchHistory.length > 0" class="history-dropdown">
         <div class="history-header">
-          <span class="history-title">搜索历史</span>
-          <button class="history-clear-all" @mousedown.prevent="clearAllHistory" title="清空历史">
-            清空
+          <span class="history-title">{{ t('search.history') }}</span>
+          <button class="history-clear-all" @mousedown.prevent="clearAllHistory" :title="t('search.clearHistory')">
+            {{ t('search.clear') }}
           </button>
         </div>
         <div
@@ -47,7 +47,7 @@
             </div>
             <span class="history-text">{{ item.keyword }}</span>
           </div>
-          <button class="history-delete" @mousedown.prevent.stop="deleteHistoryItem(item)" title="删除">
+          <button class="history-delete" @mousedown.prevent.stop="deleteHistoryItem(item)" :title="t('search.delete')">
             ✕
           </button>
         </div>
@@ -56,7 +56,7 @@
 
     <div class="filter-options">
       <div class="option-group">
-        <label class="option-label">过滤范围:</label>
+        <label class="option-label">{{ t('search.filterScope') }}:</label>
         <div class="radio-group">
           <label class="radio-label">
             <input
@@ -65,7 +65,7 @@
               v-model="mode"
               @change="handleModeChange"
             />
-            <span>按行</span>
+            <span>{{ t('search.filterByLine') }}</span>
           </label>
           <label class="radio-label">
             <input
@@ -74,40 +74,40 @@
               v-model="mode"
               @change="handleModeChange"
             />
-            <span>按节点</span>
+            <span>{{ t('search.filterByNode') }}</span>
           </label>
         </div>
       </div>
 
       <div class="option-group">
-        <label class="option-label">匹配模式:</label>
+        <label class="option-label">{{ t('search.matchMode') }}:</label>
         <div class="radio-group">
-          <label class="radio-label" title="忽略大小写，包含即匹配">
+          <label class="radio-label" :title="t('search.fuzzyHint')">
             <input
               type="radio"
               value="fuzzy"
               v-model="searchMode"
               @change="handleSearchModeChange"
             />
-            <span>模糊</span>
+            <span>{{ t('search.fuzzy') }}</span>
           </label>
-          <label class="radio-label" title="忽略大小写，完整单词匹配">
+          <label class="radio-label" :title="t('search.exactHint')">
             <input
               type="radio"
               value="exact"
               v-model="searchMode"
               @change="handleSearchModeChange"
             />
-            <span>完全</span>
+            <span>{{ t('search.exact') }}</span>
           </label>
-          <label class="radio-label" title="使用 JSONPath 表达式">
+          <label class="radio-label" :title="t('search.jsonpathHint')">
             <input
               type="radio"
               value="jsonpath"
               v-model="searchMode"
               @change="handleSearchModeChange"
             />
-            <span>JSONPath</span>
+            <span>{{ t('search.jsonpathLabel') }}</span>
           </label>
         </div>
       </div>
@@ -118,19 +118,19 @@
           v-model="searchDecoded"
           @change="handleSearchDecodedChange"
         />
-        <span>解码内容</span>
+        <span>{{ t('search.searchDecoded') }}</span>
       </label>
 
       <div class="depth-control">
-        <label class="depth-label">展开深度:</label>
+        <label class="depth-label">{{ t('search.expandDepth') }}:</label>
         <select v-model="selectedDepth" @change="handleDepthChange" class="depth-select">
-          <option :value="-1">全部展开</option>
-          <option :value="0">全部折叠</option>
-          <option :value="1">展开1层</option>
-          <option :value="2">展开2层</option>
-          <option :value="3">展开3层</option>
-          <option :value="4">展开4层</option>
-          <option :value="5">展开5层</option>
+          <option :value="-1">{{ t('search.expandAll') }}</option>
+          <option :value="0">{{ t('search.collapseAll') }}</option>
+          <option :value="1">{{ t('search.expandLevel', { level: 1 }) }}</option>
+          <option :value="2">{{ t('search.expandLevel', { level: 2 }) }}</option>
+          <option :value="3">{{ t('search.expandLevel', { level: 3 }) }}</option>
+          <option :value="4">{{ t('search.expandLevel', { level: 4 }) }}</option>
+          <option :value="5">{{ t('search.expandLevel', { level: 5 }) }}</option>
         </select>
       </div>
     </div>
@@ -138,7 +138,7 @@
     <div v-if="searchMode === 'jsonpath'" class="jsonpath-hint">
       <span class="hint-icon">💡</span>
       <span class="hint-text">
-        示例:
+        {{ t('search.jsonpathExamples') }}:
         <code @click="fillExample('$.user.name')">$.user.name</code>,
         <code @click="fillExample('$.data[0]')">$.data[0]</code>,
         <code @click="fillExample('$.items[*]')">$.items[*]</code>,
@@ -147,13 +147,14 @@
     </div>
 
     <div v-if="store.hasSearch" class="search-stats">
-      显示 <strong>{{ store.filteredCount }}</strong> / {{ store.totalLines }} 行
+      {{ t('search.statsDisplay') }} <strong>{{ store.filteredCount }}</strong> {{ t('search.statsOf') }} {{ store.totalLines }} {{ t('search.statsLines') }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { FilterMode, SearchMode } from '../utils/types'
 import { useJsonlStore } from '../stores/jsonlStore'
 import {
@@ -164,6 +165,7 @@ import {
   removeSearchHistoryItem
 } from '../utils/searchHistory'
 
+const { t } = useI18n()
 const store = useJsonlStore()
 
 const keyword = ref('')
@@ -188,9 +190,9 @@ const searchHistory = computed<SearchHistoryItem[]>(() => {
 // 获取搜索模式的标签文本
 function getSearchModeLabel(mode: SearchMode): string {
   const labels = {
-    'fuzzy': '模糊',
-    'exact': '完全',
-    'jsonpath': 'JSONPath'
+    'fuzzy': t('search.fuzzy'),
+    'exact': t('search.exact'),
+    'jsonpath': t('search.jsonpathLabel')
   }
   return labels[mode] || mode
 }
@@ -198,8 +200,8 @@ function getSearchModeLabel(mode: SearchMode): string {
 // 获取过滤范围的标签文本
 function getFilterModeLabel(mode: FilterMode): string {
   const labels = {
-    'line': '按行',
-    'node': '按节点'
+    'line': t('search.filterByLine'),
+    'node': t('search.filterByNode')
   }
   return labels[mode] || mode
 }

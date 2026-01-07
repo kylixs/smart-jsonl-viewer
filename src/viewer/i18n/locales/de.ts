@@ -30,7 +30,31 @@ export default {
       boolean: 'Boolean',
       object: 'Objekt',
       array: 'Array'
-    }
+    },
+    clear: 'Löschen',
+    viewHistory: 'Suchverlauf anzeigen',
+    history: 'Suchverlauf',
+    clearHistory: 'Verlauf löschen',
+    delete: 'Löschen',
+    filterScope: 'Filterbereich',
+    filterByLine: 'Nach Zeile',
+    filterByNode: 'Nach Knoten',
+    matchMode: 'Übereinstimmungsmodus',
+    fuzzy: 'Unscharf',
+    fuzzyHint: 'Groß-/Kleinschreibung ignorieren, enthält Übereinstimmung',
+    exact: 'Exakt',
+    exactHint: 'Groß-/Kleinschreibung ignorieren, vollständige Wortübereinstimmung',
+    jsonpathLabel: 'JSONPath',
+    jsonpathHint: 'JSONPath-Ausdruck verwenden',
+    searchDecoded: 'Dekodierter Inhalt',
+    expandDepth: 'Erweiterungstiefe',
+    expandAll: 'Alle erweitern',
+    collapseAll: 'Alle minimieren',
+    expandLevel: '{level} Ebene(n) erweitern',
+    jsonpathExamples: 'Beispiele',
+    statsDisplay: 'Angezeigt',
+    statsOf: '/',
+    statsLines: 'Zeilen'
   },
   settings: {
     title: 'Einstellungen',
@@ -74,7 +98,7 @@ export default {
     smartDecoding: {
       title: '✨ Intelligente Dekodierung',
       feature1: 'Automatische Dekodierung von Escape-Sequenzen (\\n, \\", \\t usw.)',
-      feature2: 'Rekursives Parsen verschachtelter JSON-Strings',
+      feature2: 'Parsen verschachtelter JSON-Strings',
       feature3: 'JSON/Code-Syntaxhervorhebung, Markdown-Vorschau',
       feature4: 'Klicken Sie auf das 👁 Symbol neben Feldern, um dekodierte Inhalte anzuzeigen'
     },
@@ -89,8 +113,7 @@ export default {
       title: '🚀 Weitere Funktionen',
       feature1: 'Exportieren Sie gefilterte Ergebnisse als JSONL- oder JSON-Format',
       feature2: 'Stapelverarbeitung mit "Mehr laden"-Unterstützung',
-      feature3: 'Schnelles Scrollen nach oben/unten',
-      feature4: 'Mehrsprachige Unterstützung: Chinesisch, Englisch, Deutsch, Französisch, Spanisch'
+      feature3: 'Schnelles Scrollen nach oben/unten'
     },
     moreInfo: {
       title: '📖 Weitere Informationen',

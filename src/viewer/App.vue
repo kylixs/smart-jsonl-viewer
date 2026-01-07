@@ -53,6 +53,24 @@
             </div>
           </div>
         </div>
+        <div class="language-selector">
+          <button class="action-btn language-btn" @click.stop="toggleLanguageMenu" title="选择语言">
+            🌐
+          </button>
+          <div v-if="showLanguageMenu" class="language-menu" @click.stop>
+            <div
+              v-for="locale in availableLocales"
+              :key="locale.code"
+              class="language-menu-item"
+              :class="{ active: locale.code === currentLocale }"
+              @click="selectLanguage(locale.code)"
+            >
+              <span class="language-flag">{{ locale.flag }}</span>
+              <span class="language-name">{{ locale.name }}</span>
+              <span v-if="locale.code === currentLocale" class="language-check">✓</span>
+            </div>
+          </div>
+        </div>
         <div class="settings-selector">
           <button class="action-btn settings-btn" @click.stop="toggleSettingsPanel" title="设置">
             ⚙️
@@ -276,11 +294,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+// import { useI18n } from 'vue-i18n'
 import { useJsonlStore } from './stores/jsonlStore'
 import SearchFilter from './components/SearchFilter.vue'
 import JsonLineItem from './components/JsonLineItem.vue'
 import { exportToJsonLines, exportToJson } from './utils/parser'
 import { getSettings, saveSettings } from './utils/settings'
+import { availableLocales, setLocale, getLocale } from './i18n'
+
+// const { t } = useI18n()
+// TODO: 将所有硬编码文本替换为 t() 函数调用
 
 const store = useJsonlStore()
 const isDragging = ref(false)
@@ -290,6 +313,7 @@ const pasteContent = ref('')
 const showThemeMenu = ref(false)
 const showSettingsPanel = ref(false)
 const showHelpDialog = ref(false)
+const showLanguageMenu = ref(false)
 const selectedMaxLines = ref(10)
 const selectedIndentSize = ref(2)
 
@@ -389,6 +413,7 @@ onMounted(() => {
 
   // 监听全局点击事件，关闭主题菜单
   window.addEventListener('click', closeThemeMenu)
+  window.addEventListener('click', closeLanguageMenu)
 })
 
 onBeforeUnmount(() => {
@@ -396,6 +421,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('message', handleMessage)
   window.removeEventListener('click', closeThemeMenu)
+  window.removeEventListener('click', closeLanguageMenu)
 
   // 清空 Store 数据，释放内存
   store.cleanup()
@@ -617,6 +643,22 @@ function selectTheme(themeId: string) {
 function closeThemeMenu() {
   showThemeMenu.value = false
 }
+
+// 语言相关函数
+function toggleLanguageMenu() {
+  showLanguageMenu.value = !showLanguageMenu.value
+}
+
+function selectLanguage(locale: string) {
+  setLocale(locale)
+  showLanguageMenu.value = false
+}
+
+function closeLanguageMenu() {
+  showLanguageMenu.value = false
+}
+
+const currentLocale = computed(() => getLocale())
 
 // 滚动相关函数
 function handleScroll() {
@@ -950,6 +992,73 @@ body {
 .theme-select:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+/* 语言选择器 */
+.language-selector {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.language-btn {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: slideDown 0.2s ease-out;
+}
+
+.language-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.language-menu-item:last-child {
+  border-bottom: none;
+}
+
+.language-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.language-menu-item.active {
+  background: #f0f7ff;
+}
+
+.language-flag {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.language-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.language-check {
+  color: var(--theme-primary);
+  font-size: 16px;
+  font-weight: bold;
 }
 
 /* 设置选择器 */
@@ -1594,6 +1703,25 @@ body {
 }
 
 #app.dark .theme-menu-item.active {
+  background: #2a3a4a;
+}
+
+/* 暗色主题下的语言菜单 */
+#app.dark .language-menu {
+  background: #2a2a2a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+#app.dark .language-menu-item {
+  color: #ddd;
+  border-bottom-color: #3a3a3a;
+}
+
+#app.dark .language-menu-item:hover {
+  background: #3a3a3a;
+}
+
+#app.dark .language-menu-item.active {
   background: #2a3a4a;
 }
 

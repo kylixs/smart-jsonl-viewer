@@ -80,7 +80,8 @@ export default {
       forest: 'Forest Green',
       sunset: 'Sunset Orange',
       purple: 'Lavender Purple',
-      ruby: 'Ruby Red'
+      ruby: 'Ruby Red',
+      gray: 'Minimalist Gray'
     }
   },
   help: {
@@ -179,7 +180,7 @@ export default {
     hideToc: 'Hide Table of Contents',
     selectLanguage: 'Select or search language...',
     searchLanguageHint: 'Select or enter language name to search',
-    autoDetectLanguage: 'Auto-detect programming language',
+    autoDetectLanguage: 'Auto-detect',
     selectTheme: 'Select code highlight theme',
     showDecoded: 'Show decoded content',
     showOriginal: 'Show original content',

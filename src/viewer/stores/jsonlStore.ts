@@ -70,7 +70,7 @@ export const useJsonlStore = defineStore('jsonl', {
     searchDecoded: true,
     fileType: null,
     theme: 'light',
-    currentThemeColor: 'green',
+    currentThemeColor: 'forest',
     globalExpanded: true,
     expandDepth: -1,
     maxDisplayLines: 10,

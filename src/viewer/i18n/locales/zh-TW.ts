@@ -80,7 +80,8 @@ export default {
       forest: '森林綠',
       sunset: '日落橙',
       purple: '薰衣草紫',
-      ruby: '寶石紅'
+      ruby: '寶石紅',
+      gray: '極簡黑白'
     }
   },
   help: {
@@ -179,7 +180,7 @@ export default {
     hideToc: '隱藏目錄',
     selectLanguage: '選擇或搜尋語言...',
     searchLanguageHint: '選擇或輸入語言名稱進行搜尋',
-    autoDetectLanguage: '自動偵測程式語言',
+    autoDetectLanguage: '自動偵測',
     selectTheme: '選擇程式碼醒目提示主題',
     showDecoded: '顯示解碼後的內容',
     showOriginal: '顯示原始內容',

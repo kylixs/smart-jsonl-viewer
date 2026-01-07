@@ -80,7 +80,8 @@ export default {
       forest: 'Waldgrün',
       sunset: 'Sonnenuntergangsorange',
       purple: 'Lavendelpurpur',
-      ruby: 'Rubinrot'
+      ruby: 'Rubinrot',
+      gray: 'Minimalistisch Grau'
     }
   },
   help: {

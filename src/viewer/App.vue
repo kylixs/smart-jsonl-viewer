@@ -45,19 +45,11 @@
           <!-- 语言选择 -->
           <div class="setting-group">
             <label class="setting-group-label">{{ t('settings.language') }}:</label>
-            <div class="setting-options-grid">
-              <div
-                v-for="locale in availableLocales"
-                :key="locale.code"
-                class="setting-option-card"
-                :class="{ active: locale.code === currentLocale }"
-                @click="selectLanguage(locale.code)"
-              >
-                <span class="option-icon">{{ locale.flag }}</span>
-                <span class="option-name">{{ locale.name }}</span>
-                <span v-if="locale.code === currentLocale" class="option-check">✓</span>
-              </div>
-            </div>
+            <select v-model="currentLocale" @change="handleLanguageChange" class="setting-select">
+              <option v-for="locale in availableLocales" :key="locale.code" :value="locale.code">
+                {{ locale.flag }} {{ locale.name }}
+              </option>
+            </select>
           </div>
 
           <!-- 主题模式 -->
@@ -84,19 +76,11 @@
           <!-- 主题配色 -->
           <div class="setting-group">
             <label class="setting-group-label">{{ t('settings.themeColor') }}:</label>
-            <div class="setting-options-grid">
-              <div
-                v-for="theme in store.availableThemes"
-                :key="theme.id"
-                class="setting-option-card"
-                :class="{ active: theme.id === store.currentThemeColor }"
-                @click="selectTheme(theme.id)"
-              >
-                <span class="theme-color-preview-large" :style="{ background: `linear-gradient(135deg, ${theme.colors.gradientFrom} 0%, ${theme.colors.gradientTo} 100%)` }"></span>
-                <span class="option-name">{{ theme.name }}</span>
-                <span v-if="theme.id === store.currentThemeColor" class="option-check">✓</span>
-              </div>
-            </div>
+            <select v-model="store.currentThemeColor" @change="handleThemeColorChange" class="setting-select">
+              <option v-for="theme in store.availableThemes" :key="theme.id" :value="theme.id">
+                {{ t(theme.nameKey) }}
+              </option>
+            </select>
           </div>
 
           <!-- 预览行数 -->
@@ -346,6 +330,7 @@ const showSettingsPanel = ref(false)
 const showHelpDialog = ref(false)
 const selectedMaxLines = ref(10)
 const selectedIndentSize = ref(2)
+const currentLocale = ref(getLocale())
 
 // 当前文件信息
 const currentFileName = ref('')
@@ -651,16 +636,14 @@ function handlePaste(event: ClipboardEvent) {
 }
 
 // 主题相关函数
-function selectTheme(themeId: string) {
-  setThemeColor(themeId)
+function handleThemeColorChange() {
+  setThemeColor(store.currentThemeColor)
 }
 
 // 语言相关函数
-function selectLanguage(locale: string) {
-  setLocale(locale)
+function handleLanguageChange() {
+  setLocale(currentLocale.value)
 }
-
-const currentLocale = computed(() => getLocale())
 
 // 滚动相关函数
 function handleScroll() {

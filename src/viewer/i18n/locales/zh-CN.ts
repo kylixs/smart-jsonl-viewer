@@ -80,7 +80,8 @@ export default {
       forest: '森林绿',
       sunset: '日落橙',
       purple: '薰衣草紫',
-      ruby: '宝石红'
+      ruby: '宝石红',
+      gray: '极简黑白'
     }
   },
   help: {
@@ -179,7 +180,7 @@ export default {
     hideToc: '隐藏目录',
     selectLanguage: '选择或搜索语言...',
     searchLanguageHint: '选择或输入语言名称进行搜索',
-    autoDetectLanguage: '自动检测编程语言',
+    autoDetectLanguage: '自动检测',
     selectTheme: '选择代码高亮主题',
     showDecoded: '显示解码后的内容',
     showOriginal: '显示原始内容',

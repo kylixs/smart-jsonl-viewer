@@ -73,9 +73,9 @@ export default {
     },
     smartDecoding: {
       title: '✨ 智能解码',
-      feature1: '自动识别并解码嵌套的 JSON 字符串',
-      feature2: 'Base64 编码/解码',
-      feature3: 'URL 编码/解码',
+      feature1: '自动解码转义字符（\\n、\\"、\\t 等）',
+      feature2: '递归解析嵌套的 JSON 字符串',
+      feature3: 'JSON/代码语法高亮，Markdown 预览',
       feature4: '点击字段旁的 👁 图标查看解码内容'
     },
     themesSettings: {

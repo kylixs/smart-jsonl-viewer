@@ -73,9 +73,9 @@ export default {
     },
     smartDecoding: {
       title: '✨ Décodage intelligent',
-      feature1: 'Détection et décodage automatiques des chaînes JSON imbriquées',
-      feature2: 'Encodage/décodage Base64',
-      feature3: 'Encodage/décodage URL',
+      feature1: 'Décodage automatique des séquences d\'échappement (\\n, \\", \\t, etc.)',
+      feature2: 'Analyse récursive des chaînes JSON imbriquées',
+      feature3: 'Coloration syntaxique JSON/code, aperçu Markdown',
       feature4: 'Cliquez sur l\'icône 👁 à côté des champs pour afficher le contenu décodé'
     },
     themesSettings: {

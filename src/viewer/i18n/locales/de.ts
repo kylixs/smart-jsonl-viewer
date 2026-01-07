@@ -73,9 +73,9 @@ export default {
     },
     smartDecoding: {
       title: '✨ Intelligente Dekodierung',
-      feature1: 'Automatische Erkennung und Dekodierung verschachtelter JSON-Strings',
-      feature2: 'Base64-Kodierung/-Dekodierung',
-      feature3: 'URL-Kodierung/-Dekodierung',
+      feature1: 'Automatische Dekodierung von Escape-Sequenzen (\\n, \\", \\t usw.)',
+      feature2: 'Rekursives Parsen verschachtelter JSON-Strings',
+      feature3: 'JSON/Code-Syntaxhervorhebung, Markdown-Vorschau',
       feature4: 'Klicken Sie auf das 👁 Symbol neben Feldern, um dekodierte Inhalte anzuzeigen'
     },
     themesSettings: {

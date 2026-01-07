@@ -73,9 +73,9 @@ export default {
     },
     smartDecoding: {
       title: '✨ Smart Decoding',
-      feature1: 'Auto-detect and decode nested JSON strings',
-      feature2: 'Base64 encoding/decoding',
-      feature3: 'URL encoding/decoding',
+      feature1: 'Auto-decode escape sequences (\\n, \\", \\t, etc.)',
+      feature2: 'Recursively parse nested JSON strings',
+      feature3: 'JSON/code syntax highlighting, Markdown preview',
       feature4: 'Click 👁 icon next to fields to view decoded content'
     },
     themesSettings: {

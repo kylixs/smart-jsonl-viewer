@@ -6,55 +6,37 @@ import { autoDetectLanguage as hljsAutoDetect } from './syntaxHighlight'
 
 /**
  * 支持的编程语言
- * 注意：这里列出的语言会在用户选择时按需加载，只有被选择的语言才会打包
+ * 只保留常用语言，不包含大体积的不常用语言
  */
 export const SUPPORTED_LANGUAGES = [
   { value: 'plaintext', label: 'Plain Text', extensions: ['.txt'] },
-  // Web 开发
-  { value: 'javascript', label: 'JavaScript', extensions: ['.js', '.jsx', '.mjs'] },
-  { value: 'typescript', label: 'TypeScript', extensions: ['.ts', '.tsx'] },
+  { value: 'javascript', label: 'JavaScript', extensions: ['.js', '.mjs'] },
+  { value: 'typescript', label: 'TypeScript', extensions: ['.ts'] },
+  { value: 'jsx', label: 'React JSX', extensions: ['.jsx'] },
+  { value: 'tsx', label: 'React TSX', extensions: ['.tsx'] },
+  { value: 'vue', label: 'Vue', extensions: ['.vue'] },
+  { value: 'python', label: 'Python', extensions: ['.py'] },
+  { value: 'bash', label: 'Bash/Shell', extensions: ['.sh', '.bash'] },
+  { value: 'powershell', label: 'PowerShell', extensions: ['.ps1'] },
+  { value: 'json', label: 'JSON', extensions: ['.json'] },
+  { value: 'yaml', label: 'YAML', extensions: ['.yml', '.yaml'] },
   { value: 'html', label: 'HTML', extensions: ['.html', '.htm'] },
   { value: 'css', label: 'CSS', extensions: ['.css'] },
-  { value: 'scss', label: 'SCSS', extensions: ['.scss'] },
   { value: 'less', label: 'Less', extensions: ['.less'] },
-  { value: 'vue', label: 'Vue', extensions: ['.vue'] },
-  { value: 'jsx', label: 'JSX', extensions: ['.jsx'] },
-  { value: 'tsx', label: 'TSX', extensions: ['.tsx'] },
-  // 后端语言
-  { value: 'python', label: 'Python', extensions: ['.py'] },
+  { value: 'sql', label: 'SQL', extensions: ['.sql'] },
   { value: 'java', label: 'Java', extensions: ['.java'] },
+  { value: 'kotlin', label: 'Kotlin', extensions: ['.kt', '.kts'] },
   { value: 'cpp', label: 'C/C++', extensions: ['.c', '.cpp', '.h', '.hpp'] },
-  { value: 'c', label: 'C', extensions: ['.c', '.h'] },
   { value: 'csharp', label: 'C#', extensions: ['.cs'] },
+  { value: 'swift', label: 'Swift', extensions: ['.swift'] },
   { value: 'go', label: 'Go', extensions: ['.go'] },
   { value: 'rust', label: 'Rust', extensions: ['.rs'] },
   { value: 'php', label: 'PHP', extensions: ['.php'] },
   { value: 'ruby', label: 'Ruby', extensions: ['.rb'] },
-  { value: 'swift', label: 'Swift', extensions: ['.swift'] },
-  { value: 'kotlin', label: 'Kotlin', extensions: ['.kt'] },
-  { value: 'scala', label: 'Scala', extensions: ['.scala'] },
-  { value: 'r', label: 'R', extensions: ['.r', '.R'] },
-  // 脚本语言
-  { value: 'bash', label: 'Bash/Shell', extensions: ['.sh', '.bash'] },
-  { value: 'powershell', label: 'PowerShell', extensions: ['.ps1'] },
-  { value: 'perl', label: 'Perl', extensions: ['.pl'] },
-  { value: 'lua', label: 'Lua', extensions: ['.lua'] },
-  // 数据格式
-  { value: 'json', label: 'JSON', extensions: ['.json'] },
-  { value: 'yaml', label: 'YAML', extensions: ['.yml', '.yaml'] },
   { value: 'xml', label: 'XML', extensions: ['.xml'] },
-  { value: 'toml', label: 'TOML', extensions: ['.toml'] },
-  { value: 'ini', label: 'INI', extensions: ['.ini'] },
-  // 数据库
-  { value: 'sql', label: 'SQL', extensions: ['.sql'] },
-  // 文档
-  { value: 'markdown', label: 'Markdown', extensions: ['.md'] },
-  { value: 'latex', label: 'LaTeX', extensions: ['.tex'] },
-  // 其他
-  { value: 'dockerfile', label: 'Dockerfile', extensions: ['Dockerfile'] },
-  { value: 'makefile', label: 'Makefile', extensions: ['Makefile'] },
-  { value: 'graphql', label: 'GraphQL', extensions: ['.graphql', '.gql'] },
   { value: 'proto', label: 'Protocol Buffers', extensions: ['.proto'] },
+  { value: 'markdown', label: 'Markdown', extensions: ['.md'] },
+  { value: 'dockerfile', label: 'Dockerfile', extensions: ['Dockerfile'] },
 ] as const
 
 export type LanguageType = typeof SUPPORTED_LANGUAGES[number]['value']

@@ -19,202 +19,131 @@ const loadedThemes = new Set<string>()
 // 已加载的语言集合
 const loadedLangs = new Set<string>()
 
-// 主题动态导入映射（按需加载）
-const themeImports: Record<string, () => Promise<any>> = {
-  'github-light': () => import('@shikijs/themes/github-light'),
-  'github-dark': () => import('@shikijs/themes/github-dark'),
-  'light-plus': () => import('@shikijs/themes/light-plus'),
-  'dark-plus': () => import('@shikijs/themes/dark-plus'),
-  'monokai': () => import('@shikijs/themes/monokai'),
-  'dracula': () => import('@shikijs/themes/dracula'),
-  'dracula-soft': () => import('@shikijs/themes/dracula-soft'),
-  'nord': () => import('@shikijs/themes/nord'),
-  'one-light': () => import('@shikijs/themes/one-light'),
-  'one-dark-pro': () => import('@shikijs/themes/one-dark-pro'),
-  'solarized-light': () => import('@shikijs/themes/solarized-light'),
-  'solarized-dark': () => import('@shikijs/themes/solarized-dark'),
-  'night-owl': () => import('@shikijs/themes/night-owl'),
-  'night-owl-light': () => import('@shikijs/themes/min-light'),
-}
-
 // 语言类型映射（将我们的类型映射到 Shiki 的语言名称）
-// 这个映射决定了哪些语言会被打包
 const languageMap: Partial<Record<LanguageType, string>> = {
   plaintext: 'plaintext',
-  // Web 开发
+  // Web 开发（常用，预加载）
   javascript: 'javascript',
   typescript: 'typescript',
-  html: 'html',
-  css: 'css',
-  scss: 'scss',
-  less: 'less',
-  vue: 'vue',
   jsx: 'jsx',
   tsx: 'tsx',
-  // 后端语言
+  vue: 'vue',
+  html: 'html',
+  css: 'css',
+  less: 'less',
+  // 后端语言（常用，预加载）
   python: 'python',
   java: 'java',
+  kotlin: 'kotlin',
   cpp: 'cpp',
-  c: 'c',
   csharp: 'csharp',
+  swift: 'swift',
   go: 'go',
   rust: 'rust',
   php: 'php',
   ruby: 'ruby',
-  swift: 'swift',
-  kotlin: 'kotlin',
-  scala: 'scala',
-  r: 'r',
-  // 脚本语言
+  // Shell/Scripts
   bash: 'bash',
   powershell: 'powershell',
-  perl: 'perl',
-  lua: 'lua',
-  // 数据格式
+  // 数据格式（常用，预加载）
   json: 'json',
   yaml: 'yaml',
   xml: 'xml',
-  toml: 'toml',
-  ini: 'ini',
-  // 数据库
-  sql: 'sql',
-  // 文档
-  markdown: 'markdown',
-  latex: 'latex',
-  // 其他
-  dockerfile: 'dockerfile',
-  makefile: 'makefile',
-  graphql: 'graphql',
   proto: 'proto',
-}
-
-// 动态导入语言的映射（按需加载）
-const languageImports: Partial<Record<string, () => Promise<any>>> = {
-  javascript: () => import('@shikijs/langs/javascript'),
-  typescript: () => import('@shikijs/langs/typescript'),
-  html: () => import('@shikijs/langs/html'),
-  css: () => import('@shikijs/langs/css'),
-  scss: () => import('@shikijs/langs/scss'),
-  less: () => import('@shikijs/langs/less'),
-  vue: () => import('@shikijs/langs/vue'),
-  jsx: () => import('@shikijs/langs/jsx'),
-  tsx: () => import('@shikijs/langs/tsx'),
-  python: () => import('@shikijs/langs/python'),
-  java: () => import('@shikijs/langs/java'),
-  cpp: () => import('@shikijs/langs/cpp'),
-  c: () => import('@shikijs/langs/c'),
-  csharp: () => import('@shikijs/langs/csharp'),
-  go: () => import('@shikijs/langs/go'),
-  rust: () => import('@shikijs/langs/rust'),
-  php: () => import('@shikijs/langs/php'),
-  ruby: () => import('@shikijs/langs/ruby'),
-  swift: () => import('@shikijs/langs/swift'),
-  kotlin: () => import('@shikijs/langs/kotlin'),
-  scala: () => import('@shikijs/langs/scala'),
-  r: () => import('@shikijs/langs/r'),
-  bash: () => import('@shikijs/langs/bash'),
-  powershell: () => import('@shikijs/langs/powershell'),
-  perl: () => import('@shikijs/langs/perl'),
-  lua: () => import('@shikijs/langs/lua'),
-  json: () => import('@shikijs/langs/json'),
-  yaml: () => import('@shikijs/langs/yaml'),
-  xml: () => import('@shikijs/langs/xml'),
-  toml: () => import('@shikijs/langs/toml'),
-  ini: () => import('@shikijs/langs/ini'),
-  sql: () => import('@shikijs/langs/sql'),
-  markdown: () => import('@shikijs/langs/markdown'),
-  latex: () => import('@shikijs/langs/latex'),
-  dockerfile: () => import('@shikijs/langs/dockerfile'),
-  makefile: () => import('@shikijs/langs/makefile'),
-  graphql: () => import('@shikijs/langs/graphql'),
-  proto: () => import('@shikijs/langs/proto'),
+  // 其他常用
+  sql: 'sql',
+  markdown: 'markdown',
+  dockerfile: 'dockerfile',
 }
 
 /**
- * 初始化 Shiki 高亮器（仅加载默认主题和最常用的语言）
- * 其他主题和语言按需动态加载
+ * 初始化 Shiki 高亮器
+ * 预加载所有常用语言和主题，避免语法高亮失效
  */
 async function getHighlighterInstance(): Promise<HighlighterCore> {
   if (!highlighterInstance) {
-    // 仅预加载最常用的语言（减少初始 bundle 体积）
     highlighterInstance = await createHighlighterCore({
       themes: [
+        // 预加载所有主题（避免切换主题时失效）
         import('@shikijs/themes/github-light'),
         import('@shikijs/themes/github-dark'),
+        import('@shikijs/themes/github-light-default'),
+        import('@shikijs/themes/github-dark-default'),
+        import('@shikijs/themes/github-dark-dimmed'),
+        import('@shikijs/themes/light-plus'),
+        import('@shikijs/themes/dark-plus'),
+        import('@shikijs/themes/one-light'),
+        import('@shikijs/themes/one-dark-pro'),
+        import('@shikijs/themes/solarized-light'),
+        import('@shikijs/themes/solarized-dark'),
+        import('@shikijs/themes/vitesse-light'),
+        import('@shikijs/themes/vitesse-dark'),
+        import('@shikijs/themes/material-theme-lighter'),
+        import('@shikijs/themes/material-theme-darker'),
+        import('@shikijs/themes/nord'),
+        import('@shikijs/themes/monokai'),
+        import('@shikijs/themes/dracula'),
+        import('@shikijs/themes/dracula-soft'),
+        import('@shikijs/themes/tokyo-night'),
+        import('@shikijs/themes/night-owl'),
       ],
       langs: [
-        // 仅预加载这4个最常用的语言
+        // 预加载所有常用语言（避免语法高亮失效）
         import('@shikijs/langs/javascript'),
         import('@shikijs/langs/typescript'),
+        import('@shikijs/langs/jsx'),
+        import('@shikijs/langs/tsx'),
+        import('@shikijs/langs/vue'),
+        import('@shikijs/langs/html'),
+        import('@shikijs/langs/css'),
+        import('@shikijs/langs/less'),
         import('@shikijs/langs/python'),
+        import('@shikijs/langs/java'),
+        import('@shikijs/langs/kotlin'),
+        import('@shikijs/langs/cpp'),
+        import('@shikijs/langs/csharp'),
+        import('@shikijs/langs/swift'),
+        import('@shikijs/langs/go'),
+        import('@shikijs/langs/rust'),
+        import('@shikijs/langs/php'),
+        import('@shikijs/langs/ruby'),
+        import('@shikijs/langs/bash'),
+        import('@shikijs/langs/powershell'),
         import('@shikijs/langs/json'),
+        import('@shikijs/langs/yaml'),
+        import('@shikijs/langs/xml'),
+        import('@shikijs/langs/proto'),
+        import('@shikijs/langs/sql'),
+        import('@shikijs/langs/markdown'),
+        import('@shikijs/langs/dockerfile'),
       ],
       engine: createOnigurumaEngine(import('shiki/wasm'))
     })
 
-    // 标记已加载
-    loadedThemes.add('github-light')
-    loadedThemes.add('github-dark')
-    loadedLangs.add('javascript')
-    loadedLangs.add('typescript')
-    loadedLangs.add('python')
-    loadedLangs.add('json')
+    // 标记所有已加载的主题
+    const themes = [
+      'github-light', 'github-dark', 'github-light-default', 'github-dark-default',
+      'github-dark-dimmed', 'light-plus', 'dark-plus', 'one-light', 'one-dark-pro',
+      'solarized-light', 'solarized-dark', 'vitesse-light', 'vitesse-dark',
+      'material-theme-lighter', 'material-theme-darker', 'nord', 'monokai',
+      'dracula', 'dracula-soft', 'tokyo-night', 'night-owl'
+    ]
+    themes.forEach(theme => loadedThemes.add(theme))
+
+    // 标记所有已加载的语言
+    const langs = [
+      'javascript', 'typescript', 'jsx', 'tsx', 'vue', 'html', 'css', 'less',
+      'python', 'java', 'kotlin', 'cpp', 'csharp', 'swift', 'go', 'rust',
+      'php', 'ruby', 'bash', 'powershell', 'json', 'yaml', 'xml', 'proto',
+      'sql', 'markdown', 'dockerfile'
+    ]
+    langs.forEach(lang => loadedLangs.add(lang))
   }
   return highlighterInstance
 }
 
 /**
- * 动态加载语言（按需加载）
- */
-async function ensureLangLoaded(lang: string): Promise<void> {
-  if (loadedLangs.has(lang)) {
-    return
-  }
-
-  const importFunc = languageImports[lang]
-  if (!importFunc) {
-    console.warn(`语言 ${lang} 没有配置导入函数，使用 javascript 作为后备`)
-    return
-  }
-
-  try {
-    const highlighter = await getHighlighterInstance()
-    const langModule = await importFunc()
-    await highlighter.loadLanguage(langModule.default)
-    loadedLangs.add(lang)
-    console.log(`✅ 动态加载语言: ${lang}`)
-  } catch (error) {
-    console.error(`❌ 加载语言 ${lang} 失败:`, error)
-  }
-}
-
-/**
- * 动态加载主题（按需加载）
- */
-async function ensureThemeLoaded(theme: string): Promise<void> {
-  if (loadedThemes.has(theme)) {
-    return
-  }
-
-  const importFunc = themeImports[theme]
-  if (!importFunc) {
-    console.warn(`主题 ${theme} 没有配置导入函数`)
-    return
-  }
-
-  try {
-    const highlighter = await getHighlighterInstance()
-    const themeModule = await importFunc()
-    await highlighter.loadTheme(themeModule.default)
-    loadedThemes.add(theme)
-    console.log(`✅ 动态加载主题: ${theme}`)
-  } catch (error) {
-    console.error(`❌ 加载主题 ${theme} 失败:`, error)
-  }
-}
-
-/**
- * 设置当前主题（并动态加载）
+ * 设置当前主题
  */
 export async function setTheme(
   lightTheme: string,
@@ -224,17 +153,10 @@ export async function setTheme(
   currentLightTheme = lightTheme
   currentDarkTheme = darkTheme
   currentMode = mode
-
-  // 动态加载主题（如果尚未加载）
-  await Promise.all([
-    ensureThemeLoaded(lightTheme),
-    ensureThemeLoaded(darkTheme)
-  ])
 }
 
 /**
  * 根据语言类型高亮代码（异步）
- * 按需动态加载所需的语言
  */
 export async function highlightCode(
   code: string,
@@ -247,15 +169,10 @@ export async function highlightCode(
     const highlighter = await getHighlighterInstance()
     let shikiLang = languageMap[language] || 'javascript'
 
-    // 动态加载语言（如果尚未加载）
+    // 如果语言未预加载，使用 javascript 作为后备
     if (!loadedLangs.has(shikiLang)) {
-      await ensureLangLoaded(shikiLang)
-
-      // 如果加载失败，使用 javascript 作为后备
-      if (!loadedLangs.has(shikiLang)) {
-        console.warn(`语言 ${shikiLang} 加载失败，使用 javascript 作为后备`)
-        shikiLang = 'javascript'
-      }
+      console.warn(`语言 ${shikiLang} 未预加载，使用 javascript 作为后备`)
+      shikiLang = 'javascript'
     }
 
     // 根据 mode 决定使用哪个主题
@@ -269,15 +186,10 @@ export async function highlightCode(
       theme = isDark ? currentDarkTheme : currentLightTheme
     }
 
-    // 动态加载主题（如果尚未加载）
+    // 如果主题未预加载，使用默认主题
     if (!loadedThemes.has(theme)) {
-      await ensureThemeLoaded(theme)
-
-      // 如果加载失败，使用默认主题
-      if (!loadedThemes.has(theme)) {
-        console.warn(`主题 ${theme} 加载失败，使用默认主题`)
-        theme = isDark ? 'github-dark' : 'github-light'
-      }
+      console.warn(`主题 ${theme} 未预加载，使用默认主题`)
+      theme = isDark ? 'github-dark' : 'github-light'
     }
 
     const html = highlighter.codeToHtml(code, {

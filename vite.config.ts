@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [vue()],
   resolve: {
     alias: {
@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true, // 启用 sourcemap 用于调试
+    sourcemap: mode === 'development', // 仅在 dev 模式生成 sourcemap
     rollupOptions: {
       input: {
         viewer: resolve(__dirname, 'index.html'),
@@ -31,4 +31,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))

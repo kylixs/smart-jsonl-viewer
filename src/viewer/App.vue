@@ -257,6 +257,7 @@
               <li>{{ t('help.fileLoading.feature1') }}</li>
               <li>{{ t('help.fileLoading.feature2') }}</li>
               <li>{{ t('help.fileLoading.feature3') }}</li>
+              <li>{{ t('help.fileLoading.feature4') }}</li>
             </ul>
           </section>
 

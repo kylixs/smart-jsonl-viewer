@@ -94,7 +94,8 @@ export default {
       title: '📁 Chargement de fichiers',
       feature1: 'Ouvrez rapidement des fichiers volumineux de 100 Mo+ avec chargement asynchrone en arrière-plan',
       feature2: 'Supporte le glisser-déposer, cliquer pour sélectionner ou coller le contenu',
-      feature3: 'Détection automatique des formats .jsonl, .json, .ndjson'
+      feature3: 'Détection automatique des formats .jsonl, .json, .ndjson',
+      feature4: 'Astuce : Ouvrir de gros fichiers depuis la page d\'accueil de l\'extension est plus rapide'
     },
     searchFilter: {
       title: '🔍 Recherche et filtrage',

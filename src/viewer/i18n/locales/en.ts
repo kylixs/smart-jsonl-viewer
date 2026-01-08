@@ -94,7 +94,8 @@ export default {
       title: '📁 File Loading',
       feature1: 'Quickly open 100MB+ large files with background async loading',
       feature2: 'Support drag & drop, click to select, or paste content',
-      feature3: 'Auto-detect .jsonl, .json, .ndjson formats'
+      feature3: 'Auto-detect .jsonl, .json, .ndjson formats',
+      feature4: 'Tip: Opening large files from extension home page is faster'
     },
     searchFilter: {
       title: '🔍 Search & Filter',

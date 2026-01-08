@@ -94,7 +94,8 @@ export default {
       title: '📁 Datei laden',
       feature1: 'Schnelles Öffnen von 100MB+ großen Dateien mit Hintergrund-Async-Laden',
       feature2: 'Unterstützung für Drag & Drop, Klick zum Auswählen oder Inhalt einfügen',
-      feature3: 'Automatische Erkennung von .jsonl, .json, .ndjson Formaten'
+      feature3: 'Automatische Erkennung von .jsonl, .json, .ndjson Formaten',
+      feature4: 'Tipp: Große Dateien von der Erweiterungsstartseite zu öffnen ist schneller'
     },
     searchFilter: {
       title: '🔍 Suche & Filter',

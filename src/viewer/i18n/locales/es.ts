@@ -94,7 +94,8 @@ export default {
       title: '📁 Carga de archivos',
       feature1: 'Abra rápidamente archivos grandes de 100MB+ con carga asíncrona en segundo plano',
       feature2: 'Soporte para arrastrar y soltar, hacer clic para seleccionar o pegar contenido',
-      feature3: 'Detección automática de formatos .jsonl, .json, .ndjson'
+      feature3: 'Detección automática de formatos .jsonl, .json, .ndjson',
+      feature4: 'Consejo: Abrir archivos grandes desde la página de inicio de la extensión es más rápido'
     },
     searchFilter: {
       title: '🔍 Búsqueda y filtrado',

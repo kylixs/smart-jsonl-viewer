@@ -124,8 +124,8 @@ async function copyLine() {
 }
 
 .line-number {
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 12px;
+  font-family: var(--viewer-font-family);
+  font-size: calc(var(--viewer-font-size) * 0.92);
   color: #999;
   min-width: 40px;
   text-align: right;
@@ -141,8 +141,8 @@ async function copyLine() {
 }
 
 .line-preview {
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 13px;
+  font-family: var(--viewer-font-family);
+  font-size: var(--viewer-font-size);
   color: #333;
   flex: 1;
   overflow: hidden;
@@ -166,8 +166,8 @@ async function copyLine() {
   background: #f5f5f5;
   border-left: 2px solid #ddd;
   border-radius: 3px;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 11px;
+  font-family: var(--viewer-font-family);
+  font-size: calc(var(--viewer-font-size) * 0.85);
   opacity: 0.8;
 }
 

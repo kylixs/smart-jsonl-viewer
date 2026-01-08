@@ -139,8 +139,8 @@ function toggleExpand() {
 
 <style scoped>
 .json-tree {
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 14px;
+  font-family: var(--viewer-font-family);
+  font-size: var(--viewer-font-size);
   line-height: 1.6;
 }
 
@@ -183,7 +183,7 @@ function toggleExpand() {
 .collapsed-indicator {
   color: #888;
   font-style: italic;
-  font-size: 12px;
+  font-size: calc(var(--viewer-font-size) * 0.86);
   margin: 0 4px;
 }
 

@@ -297,7 +297,6 @@
               <li>{{ t('help.moreFeatures.feature1') }}</li>
               <li>{{ t('help.moreFeatures.feature2') }}</li>
               <li>{{ t('help.moreFeatures.feature3') }}</li>
-              <li>{{ t('help.moreFeatures.feature4') }}</li>
             </ul>
           </section>
 

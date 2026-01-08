@@ -132,14 +132,14 @@
           <div class="setting-group">
             <label class="setting-group-label">{{ t('settings.fontSize') }}:</label>
             <select v-model="selectedFontSize" @change="handleFontSizeChange" class="setting-select">
-              <option :value="11">11 {{ t('settings.px') }}</option>
-              <option :value="12">12 {{ t('settings.px') }}</option>
-              <option :value="13">13 {{ t('settings.px') }}</option>
-              <option :value="14">14 {{ t('settings.px') }}</option>
-              <option :value="15">15 {{ t('settings.px') }}</option>
-              <option :value="16">16 {{ t('settings.px') }}</option>
-              <option :value="18">18 {{ t('settings.px') }}</option>
-              <option :value="20">20 {{ t('settings.px') }}</option>
+              <option :value="11">11 px</option>
+              <option :value="12">12 px</option>
+              <option :value="13">13 px</option>
+              <option :value="14">14 px</option>
+              <option :value="15">15 px</option>
+              <option :value="16">16 px</option>
+              <option :value="18">18 px</option>
+              <option :value="20">20 px</option>
             </select>
           </div>
         </div>

@@ -29,7 +29,7 @@ export function filterJsonLines(
   keyword: string,
   mode: FilterMode,
   searchMode: SearchMode = 'fuzzy',
-  searchDecoded: boolean = true
+  autoDecodeEnabled: boolean = true
 ): JsonLineNode[] {
   if (!keyword.trim()) {
     return lines
@@ -46,7 +46,7 @@ export function filterJsonLines(
 
   if (mode === 'line') {
     return lines.filter((line) =>
-      matchInLine(line, processedKeyword, searchMode)
+      matchInLine(line, processedKeyword, searchMode, autoDecodeEnabled)
     )
   } else {
     // 节点模式：只显示包含关键字的叶子节点及其路径
@@ -56,7 +56,7 @@ export function filterJsonLines(
           line.parsedData,
           processedKeyword,
           searchMode,
-          searchDecoded
+          autoDecodeEnabled
         )
         if (filteredData === null) {
           return null
@@ -71,15 +71,22 @@ export function filterJsonLines(
 }
 
 /**
- * 检查一行是否包含关键字（优化版本：只搜索原始内容）
+ * 检查一行是否包含关键字（所看即所得）
+ * 根据 autoDecodeEnabled 选择搜索解码内容还是原始内容
  */
 function matchInLine(
   line: JsonLineNode,
   keyword: string,
-  searchMode: SearchMode
+  searchMode: SearchMode,
+  autoDecodeEnabled: boolean
 ): boolean {
-  // 只搜索原始内容（已经是字符串形式，不需要递归）
-  return matchString(line.rawContent.toLowerCase(), keyword, searchMode)
+  // 所看即所得：根据用户的渲染偏好选择搜索的文本
+  // - autoDecodeEnabled=true: 搜索 decodedText（如果有），否则搜索 rawContent
+  // - autoDecodeEnabled=false: 搜索 rawContent
+  const searchText = (autoDecodeEnabled && line.decodedText)
+    ? line.decodedText
+    : line.rawContent
+  return matchString(searchText.toLowerCase(), keyword, searchMode)
 }
 
 /**
@@ -103,7 +110,7 @@ function matchString(text: string, keyword: string, searchMode: SearchMode): boo
 /**
  * 在对象中递归搜索关键字（优化版本）
  */
-function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuzzy', searchDecoded: boolean = true): boolean {
+function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuzzy', autoDecodeEnabled: boolean = true): boolean {
   if (obj === null || obj === undefined) {
     return false
   }
@@ -116,7 +123,7 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
     }
 
     // 如果是字符串，且开启了解码搜索，尝试解码后再搜索
-    if (typeof obj === 'string' && searchDecoded && obj.length > 0) {
+    if (typeof obj === 'string' && autoDecodeEnabled && obj.length > 0) {
       // 优化：只对包含转义字符或看起来像 JSON 的字符串进行解码/解析
       const needsDecode = obj.includes('\\') || obj.includes('"')
 
@@ -136,7 +143,7 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
         if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && trimmed.length < 10000) {
           try {
             const parsed = JSON.parse(obj)
-            if (searchInObject(parsed, keyword, searchMode, searchDecoded)) {
+            if (searchInObject(parsed, keyword, searchMode, autoDecodeEnabled)) {
               return true
             }
           } catch {
@@ -149,9 +156,9 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
     return false
   }
 
-  // ��归搜索数组
+  // 递归搜索数组
   if (Array.isArray(obj)) {
-    return obj.some((item) => searchInObject(item, keyword, searchMode, searchDecoded))
+    return obj.some((item) => searchInObject(item, keyword, searchMode, autoDecodeEnabled))
   }
 
   // 递归搜索对象
@@ -161,7 +168,7 @@ function searchInObject(obj: any, keyword: string, searchMode: SearchMode = 'fuz
       return true
     }
     // 搜索值
-    if (searchInObject(obj[key], keyword, searchMode, searchDecoded)) {
+    if (searchInObject(obj[key], keyword, searchMode, autoDecodeEnabled)) {
       return true
     }
   }
@@ -176,7 +183,7 @@ function filterNodes(
   node: any,
   keyword: string,
   searchMode: SearchMode,
-  searchDecoded: boolean
+  autoDecodeEnabled: boolean
 ): any {
   if (node === null || node === undefined) {
     return null
@@ -184,7 +191,7 @@ function filterNodes(
 
   // 叶子节点
   if (typeof node !== 'object') {
-    if (searchInObject(node, keyword, searchMode, searchDecoded)) {
+    if (searchInObject(node, keyword, searchMode, autoDecodeEnabled)) {
       return node
     }
     return null
@@ -193,7 +200,7 @@ function filterNodes(
   // 数组
   if (Array.isArray(node)) {
     const filtered = node
-      .map((item) => filterNodes(item, keyword, searchMode, searchDecoded))
+      .map((item) => filterNodes(item, keyword, searchMode, autoDecodeEnabled))
       .filter((item) => item !== null)
 
     return filtered.length > 0 ? filtered : null
@@ -212,7 +219,7 @@ function filterNodes(
     }
 
     // 递归过滤值
-    const filtered = filterNodes(node[key], keyword, searchMode, searchDecoded)
+    const filtered = filterNodes(node[key], keyword, searchMode, autoDecodeEnabled)
     if (filtered !== null) {
       result[key] = filtered
       hasMatch = true

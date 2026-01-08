@@ -3,6 +3,79 @@ import type { DecodedResult } from './types'
 const MAX_RECURSION_DEPTH = 10
 
 /**
+ * 提取对象中所有解码后的文本值，用于搜索
+ * 智能判断：如果不需要解码，返回空字符串
+ */
+export function extractDecodedText(parsedData: any): string {
+  let hasDecoding = false  // 标记是否发生了解码
+  const texts: string[] = []
+
+  function traverse(value: any, depth: number = 0) {
+    // 防止无限递归
+    if (depth > MAX_RECURSION_DEPTH) return
+
+    if (value === null || value === undefined) return
+
+    if (typeof value === 'string') {
+      // 检查是否需要解码
+      const hasEscape = value.includes('\\')
+      const looksLikeJson = value.trim().startsWith('{') || value.trim().startsWith('[')
+
+      if (!hasEscape && !looksLikeJson) {
+        // 不需要解码，原样添加
+        texts.push(value)
+        return
+      }
+
+      // 需要解码转义字符
+      if (hasEscape) {
+        const decoded = unescapeString(value)
+        if (decoded !== value) {
+          hasDecoding = true  // 标记发生了解码
+          texts.push(decoded)
+        } else {
+          texts.push(value)
+        }
+      } else {
+        texts.push(value)
+      }
+
+      // 尝试解析嵌套 JSON
+      if (looksLikeJson && value.length < 100000) {  // 避免解析超大 JSON
+        try {
+          const nested = JSON.parse(value)
+          hasDecoding = true  // 解析了嵌套 JSON
+          traverse(nested, depth + 1)
+        } catch {
+          // 解析失败，不是有效 JSON
+        }
+      }
+    } else if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        value.forEach(item => traverse(item, depth + 1))
+      } else {
+        for (const key in value) {
+          traverse(value[key], depth + 1)
+        }
+      }
+    } else {
+      // 数字、布尔值等
+      texts.push(String(value))
+    }
+  }
+
+  traverse(parsedData)
+
+  // 关键变化：如果没有发生任何解码，返回空字符串
+  if (!hasDecoding) {
+    return ''  // 不需要解码，返回空字符串
+  }
+
+  // 发生了解码，返回新字符串
+  return texts.join(' ')
+}
+
+/**
  * 智能解码值，递归处理嵌套的 JSON 字符串
  */
 export function smartDecode(

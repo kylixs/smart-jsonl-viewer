@@ -7,6 +7,7 @@ export interface JsonLineNode {
   isExpanded: boolean
   decodedStrings: Map<string, DecodedString>
   matchedPath?: string // JSONPath 匹配时的路径
+  decodedText: string // 解码后的文本缓存（用于搜索和显示），可能引用 rawContent
 }
 
 // JSON 节点
@@ -50,5 +51,5 @@ export interface SearchOptions {
   keyword: string
   mode: FilterMode
   searchMode: SearchMode
-  searchDecoded: boolean
+  autoDecodeEnabled: boolean
 }

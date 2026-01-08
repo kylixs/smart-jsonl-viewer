@@ -17,8 +17,8 @@ interface JsonlState {
   filterMode: FilterMode
   // 搜索模式
   searchMode: SearchMode
-  // 是否搜索解码后的内容
-  searchDecoded: boolean
+  // 是否启用自动解码
+  autoDecodeEnabled: boolean
   // 文件类型
   fileType: 'jsonl' | 'json' | 'invalid' | null
   // 主题（明暗模式）
@@ -58,7 +58,7 @@ interface JsonlState {
     keyword: string
     filterMode: FilterMode
     searchMode: SearchMode
-    searchDecoded: boolean
+    autoDecodeEnabled: boolean
   } | null
   // 当前渲染任务ID（用于取消旧的渲染任务）
   currentRenderTaskId: number
@@ -71,7 +71,7 @@ export const useJsonlStore = defineStore('jsonl', {
     searchKeyword: '',
     filterMode: 'line',
     searchMode: 'fuzzy',
-    searchDecoded: true,
+    autoDecodeEnabled: true,
     fileType: null,
     theme: 'light',
     currentThemeColor: 'forest',
@@ -293,10 +293,10 @@ export const useJsonlStore = defineStore('jsonl', {
     },
 
     /**
-     * 切换是否搜索解码内容
+     * 切换自动解码
      */
-    toggleSearchDecoded() {
-      this.searchDecoded = !this.searchDecoded
+    toggleAutoDecodeEnabled() {
+      this.autoDecodeEnabled = !this.autoDecodeEnabled
       // 不重置 visibleCount，让 scheduleRender 控制渲染
       const filtered = this.applyFilter(false)
       // 只有真正执行了过滤才调度渲染
@@ -318,7 +318,7 @@ export const useJsonlStore = defineStore('jsonl', {
         keyword: this.searchKeyword.trim(),
         filterMode: this.filterMode,
         searchMode: this.searchMode,
-        searchDecoded: this.searchDecoded
+        autoDecodeEnabled: this.autoDecodeEnabled
       }
 
       // 检查参数是否与上次相同，如果相同则跳过过滤
@@ -326,7 +326,7 @@ export const useJsonlStore = defineStore('jsonl', {
           this.lastFilterParams.keyword === currentParams.keyword &&
           this.lastFilterParams.filterMode === currentParams.filterMode &&
           this.lastFilterParams.searchMode === currentParams.searchMode &&
-          this.lastFilterParams.searchDecoded === currentParams.searchDecoded) {
+          this.lastFilterParams.autoDecodeEnabled === currentParams.autoDecodeEnabled) {
         console.log(`[${new Date().toISOString()}] applyFilter 跳过: 过滤参数未改变`)
         return false // 跳过过滤
       }
@@ -354,7 +354,7 @@ export const useJsonlStore = defineStore('jsonl', {
           this.searchKeyword,
           this.filterMode,
           this.searchMode,
-          this.searchDecoded
+          this.autoDecodeEnabled
         )
         const filterTime = performance.now() - filterStartTime
         console.log(`[${new Date().toISOString()}] filterJsonLines 完成: ${this.filteredLines.length}/${this.allLines.length} 行匹配, 耗时 ${filterTime.toFixed(2)}ms`)

@@ -112,13 +112,13 @@
         </div>
       </div>
 
-      <label class="checkbox-label" v-if="searchMode !== 'jsonpath'">
+      <label class="checkbox-label">
         <input
           type="checkbox"
-          v-model="searchDecoded"
+          v-model="autoDecodeEnabled"
           @change="handleSearchDecodedChange"
         />
-        <span>{{ t('search.searchDecoded') }}</span>
+        <span>{{ t('search.autoDecodeEnabled') }}</span>
       </label>
 
       <div class="depth-control">
@@ -171,7 +171,7 @@ const store = useJsonlStore()
 const keyword = ref('')
 const mode = ref<FilterMode>('line')
 const searchMode = ref<SearchMode>('fuzzy')
-const searchDecoded = ref(true)
+const autoDecodeEnabled = ref(true)
 const selectedDepth = ref(-1)
 const showHistoryDropdown = ref(false)
 const selectedHistoryIndex = ref(-1)
@@ -211,7 +211,7 @@ onMounted(() => {
   keyword.value = store.searchKeyword
   mode.value = store.filterMode
   searchMode.value = store.searchMode
-  searchDecoded.value = store.searchDecoded
+  autoDecodeEnabled.value = store.autoDecodeEnabled
   selectedDepth.value = store.expandDepth
 })
 
@@ -337,7 +337,7 @@ function handleSearchModeChange() {
 }
 
 function handleSearchDecodedChange() {
-  store.toggleSearchDecoded()
+  store.toggleAutoDecodeEnabled()
 }
 
 function clearSearch() {

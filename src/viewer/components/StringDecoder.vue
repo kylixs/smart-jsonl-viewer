@@ -5,7 +5,7 @@
       <div class="decoder-container">
         <div class="decoder-content">
           <span v-if="displayMode === 'original'" class="value-string">
-            "{{ value }}"
+            {{ JSON.stringify(value) }}
           </span>
           <span v-else class="decoded-value">
             <span v-if="decodedType === 'json'" class="decoded-json">
@@ -50,7 +50,10 @@
         <div class="modal-header">
           <div class="modal-header-title">
             <h3>{{ t('decoder.title') }}</h3>
-            <p class="modal-esc-hint">{{ t('decoder.escHint') }}</p>
+            <p class="modal-esc-hint">
+              {{ t('decoder.escHintPrefix') }}
+              <a class="close-link" @click="showModal = false">{{ t('decoder.closePopup') }}</a>
+            </p>
           </div>
 
           <!-- Tab 切换栏 - 放在标题右侧 -->
@@ -212,7 +215,11 @@ interface Props {
 const props = defineProps<Props>()
 const store = useJsonlStore()
 
-const displayMode = ref<'original' | 'decoded'>('decoded')
+// 根据全局 autoDecodeEnabled 设置初始显示模式
+const displayMode = ref<'original' | 'decoded'>(
+  store.autoDecodeEnabled ? 'decoded' : 'original'
+)
+
 const copySuccess = ref(false)
 const copyError = ref('')
 const showModal = ref(false)
@@ -243,6 +250,12 @@ watch(() => store.isDark, () => {
   if (showModal.value && isCodeContent.value && decodedValue.value) {
     updateHighlightedCode()
   }
+})
+
+// 监听全局 autoDecodeEnabled 设置变化
+// 规则：无条件强制刷新所有节点（覆盖用户手动设置）
+watch(() => store.autoDecodeEnabled, (newValue) => {
+  displayMode.value = newValue ? 'decoded' : 'original'
 })
 
 // 处理主题切换（仅在弹窗打开时重新高亮）
@@ -637,6 +650,8 @@ function autoDetectLanguage() {
 
 function toggleMode() {
   displayMode.value = displayMode.value === 'original' ? 'decoded' : 'original'
+  // 注意：用户手动切换后，节点处于临时状态
+  // 当全局 autoDecodeEnabled 再次改变时，会被强制刷新
 }
 
 async function copyDecodedContent() {
@@ -896,7 +911,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 8px 20px;
   border-bottom: 1px solid #e0e0e0;
   flex-shrink: 0;
 }
@@ -921,6 +936,17 @@ onUnmounted(() => {
   font-weight: 400;
   color: #999;
   line-height: 1.4;
+}
+
+.modal-esc-hint .close-link {
+  color: #2472c8;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modal-esc-hint .close-link:hover {
+  color: #1a5fb4;
 }
 
 .modal-close {
@@ -1556,6 +1582,14 @@ onUnmounted(() => {
 
 :root.dark .modal-esc-hint {
   color: #666;
+}
+
+:root.dark .modal-esc-hint .close-link {
+  color: #569cd6;
+}
+
+:root.dark .modal-esc-hint .close-link:hover {
+  color: #4fc3f7;
 }
 
 :root.dark .modal-close {

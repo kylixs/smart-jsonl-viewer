@@ -1,4 +1,5 @@
 import type { JsonLineNode } from './types'
+import { extractDecodedText } from './decoder'
 
 /**
  * 解析 JSONL 文本内容
@@ -16,7 +17,8 @@ export function parseJsonLines(text: string): JsonLineNode[] {
         rawContent: line,
         parsedData,
         isExpanded: false,
-        decodedStrings: new Map()
+        decodedStrings: new Map(),
+        decodedText: extractDecodedText(parsedData)
       })
     } catch (error) {
       console.warn(`Failed to parse line ${index + 1}:`, error)
@@ -59,7 +61,8 @@ export function parseJsonLinesIncremental(
         rawContent: allLines[i],
         parsedData,
         isExpanded: false,
-        decodedStrings: new Map()
+        decodedStrings: new Map(),
+        decodedText: extractDecodedText(parsedData)
       })
     } catch (error) {
       console.warn(`Failed to parse line ${i + 1}:`, error)
@@ -101,7 +104,8 @@ export function parseJsonLinesIncremental(
             rawContent: allLines[i],
             parsedData,
             isExpanded: false,
-            decodedStrings: new Map()
+            decodedStrings: new Map(),
+            decodedText: extractDecodedText(parsedData)
           })
         } catch (error) {
           console.warn(`Failed to parse line ${i + 1}:`, error)
@@ -161,7 +165,8 @@ export function parseJson(text: string): JsonLineNode | null {
       rawContent: text,
       parsedData,
       isExpanded: false,
-      decodedStrings: new Map()
+      decodedStrings: new Map(),
+      decodedText: extractDecodedText(parsedData)
     }
   } catch (error) {
     console.error('Failed to parse JSON:', error)

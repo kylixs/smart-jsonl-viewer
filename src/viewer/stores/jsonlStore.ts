@@ -225,9 +225,15 @@ export const useJsonlStore = defineStore('jsonl', {
       // 取消当前渲染任务
       this.currentRenderTaskId++
 
-      // 清空旧数据（帮助垃圾回收）
-      this.allLines = []
-      this.filteredLines = []
+      // 彻底清空旧数据（帮助垃圾回收）
+      if (this.allLines.length > 0) {
+        this.allLines.length = 0
+        this.allLines = []
+      }
+      if (this.filteredLines.length > 0) {
+        this.filteredLines.length = 0
+        this.filteredLines = []
+      }
 
       // 加载新数据
       this.allLines = lines
@@ -341,8 +347,13 @@ export const useJsonlStore = defineStore('jsonl', {
 
       console.log(`[${new Date().toISOString()}] applyFilter 开始: hasSearch=${hasSearch}, allLines=${this.allLines.length}`)
 
-      // 清空旧的 filteredLines，帮助垃圾回收
-      this.filteredLines = []
+      // 彻底清空旧的 filteredLines，帮助垃圾回收
+      if (this.filteredLines.length > 0) {
+        // 先清空数组内容
+        this.filteredLines.length = 0
+        // 然后重新赋值（更彻底地释放引用）
+        this.filteredLines = []
+      }
 
       if (!hasSearch) {
         this.filteredLines = this.allLines
@@ -652,12 +663,18 @@ export const useJsonlStore = defineStore('jsonl', {
       // 取消当前渲染任务
       this.currentRenderTaskId++
 
-      // 清空所有数据数组
-      this.allLines = []
-      this.filteredLines = []
+      // 彻底清空所有数据数组（帮助垃圾回收）
+      if (this.allLines.length > 0) {
+        this.allLines.length = 0
+        this.allLines = []
+      }
+      if (this.filteredLines.length > 0) {
+        this.filteredLines.length = 0
+        this.filteredLines = []
+      }
 
       // 重置计数器
-      this.visibleCount = 100
+      this.visibleCount = 500
       this.renderedCount = 0
       this.loadedCount = 0
       this.totalCount = 0

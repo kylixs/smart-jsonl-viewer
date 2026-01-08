@@ -16,7 +16,7 @@ export interface CodeTheme {
 export const codeThemes: CodeTheme[] = [
   {
     id: 'github',
-    name: 'GitHub（自动）',
+    name: 'GitHub (Auto)',
     lightTheme: 'github-light',
     darkTheme: 'github-dark',
     mode: 'auto'
@@ -37,21 +37,21 @@ export const codeThemes: CodeTheme[] = [
   },
   {
     id: 'github-default',
-    name: 'GitHub Default（自动）',
+    name: 'GitHub Default (Auto)',
     lightTheme: 'github-light-default',
     darkTheme: 'github-dark-default',
     mode: 'auto'
   },
   {
     id: 'github-dimmed',
-    name: 'GitHub Dimmed（自动）',
+    name: 'GitHub Dimmed (Auto)',
     lightTheme: 'github-light',
     darkTheme: 'github-dark-dimmed',
     mode: 'auto'
   },
   {
     id: 'vscode',
-    name: 'VS Code（自动）',
+    name: 'VS Code (Auto)',
     lightTheme: 'light-plus',
     darkTheme: 'dark-plus',
     mode: 'auto'
@@ -72,14 +72,14 @@ export const codeThemes: CodeTheme[] = [
   },
   {
     id: 'one-dark-pro',
-    name: 'One Dark Pro（自动）',
+    name: 'One Dark Pro (Auto)',
     lightTheme: 'one-light',
     darkTheme: 'one-dark-pro',
     mode: 'auto'
   },
   {
     id: 'solarized',
-    name: 'Solarized（自动）',
+    name: 'Solarized (Auto)',
     lightTheme: 'solarized-light',
     darkTheme: 'solarized-dark',
     mode: 'auto'
@@ -100,14 +100,14 @@ export const codeThemes: CodeTheme[] = [
   },
   {
     id: 'vitesse',
-    name: 'Vitesse（自动）',
+    name: 'Vitesse (Auto)',
     lightTheme: 'vitesse-light',
     darkTheme: 'vitesse-dark',
     mode: 'auto'
   },
   {
     id: 'material',
-    name: 'Material Theme（自动）',
+    name: 'Material Theme (Auto)',
     lightTheme: 'material-theme-lighter',
     darkTheme: 'material-theme-darker',
     mode: 'auto'
@@ -128,7 +128,7 @@ export const codeThemes: CodeTheme[] = [
   },
   {
     id: 'dracula',
-    name: 'Dracula（自动）',
+    name: 'Dracula (Auto)',
     lightTheme: 'dracula-soft',
     darkTheme: 'dracula',
     mode: 'auto'

@@ -64,9 +64,12 @@ export default {
     themeMode: 'Theme Mode',
     maxLines: 'Preview Lines',
     indentSize: 'Indent Size',
+    fontFamily: 'Font',
+    fontSize: 'Font Size',
     unlimited: 'Unlimited',
     lines: 'lines',
-    spaces: 'spaces'
+    spaces: 'spaces',
+    px: 'px'
   },
   theme: {
     toggle: 'Toggle Theme',
@@ -173,6 +176,8 @@ export default {
     copied: 'Copied!',
     copyDecoded: 'Copy Decoded Content',
     copyFailed: 'Copy Failed',
+    copyFailedRetry: 'Copy failed, please retry',
+    markdownRenderError: 'Markdown rendering error',
     title: 'Decoded Content',
     originalContent: 'Original Content',
     markdownPreview: 'Markdown Preview',
@@ -188,6 +193,7 @@ export default {
     noMatchingLanguage: 'No matching language found',
     themeLabel: 'Theme:',
     loadingHighlight: 'Loading code highlighting...',
-    toc: 'Table of Contents'
+    toc: 'Table of Contents',
+    programmingLanguage: 'Language:'
   }
 }

@@ -64,9 +64,12 @@ export default {
     themeMode: 'Themamodus',
     maxLines: 'Vorschauzeilen',
     indentSize: 'Einrückungsgröße',
+    fontFamily: 'Schriftart',
+    fontSize: 'Schriftgröße',
     unlimited: 'Unbegrenzt',
     lines: 'Zeilen',
-    spaces: 'Leerzeichen'
+    spaces: 'Leerzeichen',
+    px: 'px'
   },
   theme: {
     toggle: 'Thema wechseln',
@@ -173,6 +176,8 @@ export default {
     copied: 'Kopiert!',
     copyDecoded: 'Dekodierten Inhalt kopieren',
     copyFailed: 'Kopieren fehlgeschlagen',
+    copyFailedRetry: 'Kopieren fehlgeschlagen, bitte erneut versuchen',
+    markdownRenderError: 'Markdown-Rendering-Fehler',
     title: 'Dekodierter Inhalt',
     originalContent: 'Originalinhalt',
     markdownPreview: 'Markdown-Vorschau',
@@ -188,6 +193,7 @@ export default {
     noMatchingLanguage: 'Keine passende Sprache gefunden',
     themeLabel: 'Thema:',
     loadingHighlight: 'Code-Hervorhebung wird geladen...',
-    toc: 'Inhaltsverzeichnis'
+    toc: 'Inhaltsverzeichnis',
+    programmingLanguage: 'Sprache:'
   }
 }

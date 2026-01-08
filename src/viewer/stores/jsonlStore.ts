@@ -33,6 +33,10 @@ interface JsonlState {
   maxDisplayLines: number
   // JSON 缩进字符数
   indentSize: number
+  // 字体
+  fontFamily: string
+  // 字体大小（像素）
+  fontSize: number
   // 当前可见行数（用于分页加载优化）
   visibleCount: number
   // 每次加载的批次大小
@@ -75,6 +79,8 @@ export const useJsonlStore = defineStore('jsonl', {
     expandDepth: -1,
     maxDisplayLines: 10,
     indentSize: 2,
+    fontFamily: 'Monaco, Menlo, Consolas, "Courier New", monospace',
+    fontSize: 13,
     visibleCount: 100, // 初始显示 100 行
     batchSize: 50, // 每次加载 50 行
     isBackgroundLoading: false,

@@ -7,12 +7,16 @@ const STORAGE_KEY = 'jsonline-viewer-settings'
 export interface AppSettings {
   maxDisplayLines: number  // 预览行数
   indentSize: number       // 缩进字符数
+  fontFamily: string       // 字体
+  fontSize: number         // 字体大小（像素）
 }
 
 // 默认设置
 const DEFAULT_SETTINGS: AppSettings = {
   maxDisplayLines: 20,
-  indentSize: 4
+  indentSize: 4,
+  fontFamily: 'Monaco, Menlo, Consolas, "Courier New", monospace',
+  fontSize: 13
 }
 
 /**

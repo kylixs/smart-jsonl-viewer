@@ -64,9 +64,12 @@ export default {
     themeMode: '主题模式',
     maxLines: '预览行数',
     indentSize: '缩进字符数',
+    fontFamily: '字体',
+    fontSize: '字体大小',
     unlimited: '不限制',
     lines: '行',
-    spaces: '个空格'
+    spaces: '个空格',
+    px: '像素'
   },
   theme: {
     toggle: '切换主题',
@@ -173,6 +176,8 @@ export default {
     copied: '已复制!',
     copyDecoded: '复制解码内容',
     copyFailed: '复制失败',
+    copyFailedRetry: '复制失败，请重试',
+    markdownRenderError: 'Markdown 渲染错误',
     title: '解码内容',
     originalContent: '原始内容',
     markdownPreview: 'Markdown 预览',
@@ -188,6 +193,7 @@ export default {
     noMatchingLanguage: '未找到匹配的语言',
     themeLabel: '配色主题：',
     loadingHighlight: '正在加载代码高亮...',
-    toc: '目录'
+    toc: '目录',
+    programmingLanguage: '编程语言：'
   }
 }

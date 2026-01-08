@@ -64,9 +64,12 @@ export default {
     themeMode: 'Modo del tema',
     maxLines: 'Líneas de vista previa',
     indentSize: 'Tamaño de sangría',
+    fontFamily: 'Fuente',
+    fontSize: 'Tamaño de fuente',
     unlimited: 'Ilimitado',
     lines: 'líneas',
-    spaces: 'espacios'
+    spaces: 'espacios',
+    px: 'px'
   },
   theme: {
     toggle: 'Cambiar tema',
@@ -173,6 +176,8 @@ export default {
     copied: '¡Copiado!',
     copyDecoded: 'Copiar contenido decodificado',
     copyFailed: 'Copia fallida',
+    copyFailedRetry: 'Copia fallida, por favor inténtelo de nuevo',
+    markdownRenderError: 'Error de renderizado de Markdown',
     title: 'Contenido decodificado',
     originalContent: 'Contenido original',
     markdownPreview: 'Vista previa de Markdown',
@@ -188,6 +193,7 @@ export default {
     noMatchingLanguage: 'No se encontró idioma coincidente',
     themeLabel: 'Tema:',
     loadingHighlight: 'Cargando resaltado de código...',
-    toc: 'Tabla de contenidos'
+    toc: 'Tabla de contenidos',
+    programmingLanguage: 'Lenguaje:'
   }
 }

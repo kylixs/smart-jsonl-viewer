@@ -76,11 +76,19 @@
           <!-- 主题配色 -->
           <div class="setting-group">
             <label class="setting-group-label">{{ t('settings.themeColor') }}:</label>
-            <select v-model="store.currentThemeColor" @change="handleThemeColorChange" class="setting-select">
-              <option v-for="theme in store.availableThemes" :key="theme.id" :value="theme.id">
-                {{ t(theme.nameKey) }}
-              </option>
-            </select>
+            <div class="color-picker-grid">
+              <div
+                v-for="theme in store.availableThemes"
+                :key="theme.id"
+                class="color-option"
+                :class="{ active: theme.id === store.currentThemeColor }"
+                @click="selectThemeColor(theme.id)"
+                :title="t(theme.nameKey)"
+              >
+                <div class="color-preview" :style="{ background: `linear-gradient(135deg, ${theme.colors.gradientFrom} 0%, ${theme.colors.gradientTo} 100%)` }"></div>
+                <span v-if="theme.id === store.currentThemeColor" class="color-check">✓</span>
+              </div>
+            </div>
           </div>
 
           <!-- 预览行数 -->
@@ -104,6 +112,34 @@
               <option :value="2">2 {{ t('settings.spaces') }}</option>
               <option :value="4">4 {{ t('settings.spaces') }}</option>
               <option :value="8">8 {{ t('settings.spaces') }}</option>
+            </select>
+          </div>
+
+          <!-- 字体 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.fontFamily') }}:</label>
+            <select v-model="selectedFontFamily" @change="handleFontFamilyChange" class="setting-select">
+              <option value="Monaco, Menlo, Consolas, 'Courier New', monospace">Monaco / Menlo</option>
+              <option value="'Fira Code', 'Cascadia Code', 'Courier New', monospace">Fira Code / Cascadia</option>
+              <option value="'Source Code Pro', monospace">Source Code Pro</option>
+              <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+              <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
+              <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+            </select>
+          </div>
+
+          <!-- 字体大小 -->
+          <div class="setting-group">
+            <label class="setting-group-label">{{ t('settings.fontSize') }}:</label>
+            <select v-model="selectedFontSize" @change="handleFontSizeChange" class="setting-select">
+              <option :value="11">11 {{ t('settings.px') }}</option>
+              <option :value="12">12 {{ t('settings.px') }}</option>
+              <option :value="13">13 {{ t('settings.px') }}</option>
+              <option :value="14">14 {{ t('settings.px') }}</option>
+              <option :value="15">15 {{ t('settings.px') }}</option>
+              <option :value="16">16 {{ t('settings.px') }}</option>
+              <option :value="18">18 {{ t('settings.px') }}</option>
+              <option :value="20">20 {{ t('settings.px') }}</option>
             </select>
           </div>
         </div>
@@ -330,6 +366,8 @@ const showSettingsPanel = ref(false)
 const showHelpDialog = ref(false)
 const selectedMaxLines = ref(10)
 const selectedIndentSize = ref(2)
+const selectedFontFamily = ref('Monaco, Menlo, Consolas, "Courier New", monospace')
+const selectedFontSize = ref(13)
 const currentLocale = ref(getLocale())
 
 // 当前文件信息
@@ -402,9 +440,14 @@ onMounted(() => {
   const settings = getSettings()
   selectedMaxLines.value = settings.maxDisplayLines
   selectedIndentSize.value = settings.indentSize
+  selectedFontFamily.value = settings.fontFamily
+  selectedFontSize.value = settings.fontSize
 
   // 应用设置到 store
   store.setMaxDisplayLines(settings.maxDisplayLines)
+
+  // 应用字体设置
+  applyFontSettings()
 
   // 从 URL 参数恢复文件名显示
   const urlParams = new URLSearchParams(window.location.search)
@@ -636,8 +679,8 @@ function handlePaste(event: ClipboardEvent) {
 }
 
 // 主题相关函数
-function handleThemeColorChange() {
-  setThemeColor(store.currentThemeColor)
+function selectThemeColor(themeId: string) {
+  setThemeColor(themeId)
 }
 
 // 语言相关函数
@@ -743,9 +786,40 @@ function handleIndentSizeChange() {
   // TODO: 将缩进字符数应用到 store 或 JSON 渲染
   console.log('缩进字符数已保存:', selectedIndentSize.value)
 }
+
+function handleFontFamilyChange() {
+  // 保存到本地存储
+  const settings = getSettings()
+  settings.fontFamily = selectedFontFamily.value
+  saveSettings(settings)
+
+  // 应用字体到文档
+  applyFontSettings()
+}
+
+function handleFontSizeChange() {
+  // 保存到本地存储
+  const settings = getSettings()
+  settings.fontSize = selectedFontSize.value
+  saveSettings(settings)
+
+  // 应用字体到文档
+  applyFontSettings()
+}
+
+// 应用字体设置到页面
+function applyFontSettings() {
+  document.documentElement.style.setProperty('--viewer-font-family', selectedFontFamily.value)
+  document.documentElement.style.setProperty('--viewer-font-size', `${selectedFontSize.value}px`)
+}
 </script>
 
 <style>
+:root {
+  --viewer-font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+  --viewer-font-size: 13px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -763,6 +837,8 @@ body {
   background: #fff;
   color: #333;
   transition: background 0.3s, color 0.3s;
+  font-family: var(--viewer-font-family);
+  font-size: var(--viewer-font-size);
 }
 
 #app.dark {
@@ -2316,6 +2392,52 @@ body {
   border-color: var(--theme-primary);
 }
 
+/* 颜色选择器网格 */
+.color-picker-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.color-option {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.color-option.active {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.color-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+}
+
+.color-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
 /* 暗色主题 - 设置对话框 */
 #app.dark .settings-dialog {
   background: #2a2a2a;
@@ -2389,5 +2511,15 @@ body {
 
 #app.dark .setting-select:focus {
   border-color: var(--theme-primary);
+}
+
+/* 暗色主题 - 颜色选择器 */
+#app.dark .color-option.active {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+#app.dark .color-option:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 </style>

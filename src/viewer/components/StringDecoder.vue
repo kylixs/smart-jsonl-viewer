@@ -92,7 +92,7 @@
             <div v-if="modalViewMode === 'raw'" class="raw-content-container">
               <!-- 语言选择器（仅当检测到代码时显示） -->
               <div v-if="isCodeContent" class="code-toolbar">
-                <label class="code-toolbar-label">编程语言：</label>
+                <label class="code-toolbar-label">{{ t('decoder.programmingLanguage') }}</label>
                 <div class="language-selector-wrapper">
                   <input
                     type="text"
@@ -383,7 +383,7 @@ async function updateMarkdownHtml() {
     await renderMermaid()
   } catch (err) {
     console.error('Markdown rendering error:', err)
-    markdownHtml.value = `<p>Markdown 渲染错误</p>`
+    markdownHtml.value = `<p>${t('decoder.markdownRenderError')}</p>`
   }
 }
 
@@ -658,14 +658,14 @@ async function copyDecodedContent() {
         copySuccess.value = false
       }, 2000)
     } else {
-      copyError.value = result.error || '复制失败'
+      copyError.value = result.error || t('decoder.copyFailed')
       setTimeout(() => {
         copyError.value = ''
       }, 3000)
     }
   } catch (err) {
     console.error('Failed to copy:', err)
-    copyError.value = '复制失败，请重试'
+    copyError.value = t('decoder.copyFailedRetry')
     setTimeout(() => {
       copyError.value = ''
     }, 3000)

@@ -64,9 +64,12 @@ export default {
     themeMode: '主題模式',
     maxLines: '預覽行數',
     indentSize: '縮排字元數',
+    fontFamily: '字型',
+    fontSize: '字型大小',
     unlimited: '不限制',
     lines: '行',
-    spaces: '個空格'
+    spaces: '個空格',
+    px: '像素'
   },
   theme: {
     toggle: '切換主題',
@@ -173,6 +176,8 @@ export default {
     copied: '已複製!',
     copyDecoded: '複製解碼內容',
     copyFailed: '複製失敗',
+    copyFailedRetry: '複製失敗，請重試',
+    markdownRenderError: 'Markdown 算繪錯誤',
     title: '解碼內容',
     originalContent: '原始內容',
     markdownPreview: 'Markdown 預覽',
@@ -188,6 +193,7 @@ export default {
     noMatchingLanguage: '未找到匹配的語言',
     themeLabel: '配色主題：',
     loadingHighlight: '正在載入程式碼醒目提示...',
-    toc: '目錄'
+    toc: '目錄',
+    programmingLanguage: '程式語言：'
   }
 }

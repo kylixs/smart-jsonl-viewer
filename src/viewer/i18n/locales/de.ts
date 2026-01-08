@@ -180,6 +180,7 @@ export default {
     copyFailedRetry: 'Kopieren fehlgeschlagen, bitte erneut versuchen',
     markdownRenderError: 'Markdown-Rendering-Fehler',
     title: 'Dekodierter Inhalt',
+    escHint: 'Drücken Sie Esc zum Schließen',
     originalContent: 'Originalinhalt',
     markdownPreview: 'Markdown-Vorschau',
     showToc: 'Inhaltsverzeichnis anzeigen',

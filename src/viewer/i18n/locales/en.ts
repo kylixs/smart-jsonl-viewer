@@ -180,6 +180,7 @@ export default {
     copyFailedRetry: 'Copy failed, please retry',
     markdownRenderError: 'Markdown rendering error',
     title: 'Decoded Content',
+    escHint: 'Press Esc to close',
     originalContent: 'Original Content',
     markdownPreview: 'Markdown Preview',
     showToc: 'Show Table of Contents',

@@ -180,6 +180,7 @@ export default {
     copyFailedRetry: '複製失敗，請重試',
     markdownRenderError: 'Markdown 算繪錯誤',
     title: '解碼內容',
+    escHint: '按 Esc 關閉彈框',
     originalContent: '原始內容',
     markdownPreview: 'Markdown 預覽',
     showToc: '顯示目錄',

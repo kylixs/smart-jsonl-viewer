@@ -180,6 +180,7 @@ export default {
     copyFailedRetry: 'Copia fallida, por favor inténtelo de nuevo',
     markdownRenderError: 'Error de renderizado de Markdown',
     title: 'Contenido decodificado',
+    escHint: 'Presione Esc para cerrar',
     originalContent: 'Contenido original',
     markdownPreview: 'Vista previa de Markdown',
     showToc: 'Mostrar tabla de contenidos',

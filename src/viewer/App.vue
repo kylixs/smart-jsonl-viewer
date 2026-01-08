@@ -296,7 +296,6 @@
             <h3>{{ t('help.moreFeatures.title') }}</h3>
             <ul>
               <li>{{ t('help.moreFeatures.feature1') }}</li>
-              <li>{{ t('help.moreFeatures.feature2') }}</li>
               <li>{{ t('help.moreFeatures.feature3') }}</li>
             </ul>
           </section>
@@ -938,6 +937,11 @@ body {
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
   color: white;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .action-btn:hover {

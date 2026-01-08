@@ -48,7 +48,10 @@
     <div v-if="showModal" class="modal-overlay" @click="showModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ t('decoder.title') }}</h3>
+          <div class="modal-header-title">
+            <h3>{{ t('decoder.title') }}</h3>
+            <p class="modal-esc-hint">{{ t('decoder.escHint') }}</p>
+          </div>
 
           <!-- Tab 切换栏 - 放在标题右侧 -->
           <div v-if="isMarkdownContent && decodedType === 'string'" class="modal-tabs">
@@ -898,12 +901,26 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.modal-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .modal-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: #333;
-  flex-shrink: 0;
+}
+
+.modal-esc-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  color: #999;
+  line-height: 1.4;
 }
 
 .modal-close {
@@ -1535,6 +1552,10 @@ onUnmounted(() => {
 
 :root.dark .modal-header h3 {
   color: #ddd;
+}
+
+:root.dark .modal-esc-hint {
+  color: #666;
 }
 
 :root.dark .modal-close {

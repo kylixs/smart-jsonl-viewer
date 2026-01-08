@@ -180,6 +180,7 @@ export default {
     copyFailedRetry: '复制失败，请重试',
     markdownRenderError: 'Markdown 渲染错误',
     title: '解码内容',
+    escHint: '按 Esc 关闭弹框',
     originalContent: '原始内容',
     markdownPreview: 'Markdown 预览',
     showToc: '显示目录',

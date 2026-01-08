@@ -162,7 +162,7 @@ export const useJsonlStore = defineStore('jsonl', {
         if (isComplete) {
           const filterStartTime = performance.now()
           // 后台加载完成时才执行过滤，避免加载期间重复过滤
-          const filtered = this.applyFilter(false)
+          const filtered = this.applyFilter()
           const filterTime = performance.now() - filterStartTime
           console.log(`[${new Date().toISOString()}] applyFilter 完成, 耗时 ${filterTime.toFixed(2)}ms`)
 
@@ -252,8 +252,8 @@ export const useJsonlStore = defineStore('jsonl', {
       this.searchKeyword = keyword
 
       const filterStartTime = performance.now()
-      // ✅ 修复内存泄露：搜索时重置 visibleCount，避免累积大量组件实例
-      const filtered = this.applyFilter(true)
+      // ✅ applyFilter 会自动根据结果重置 visibleCount
+      const filtered = this.applyFilter()
       const filterTime = performance.now() - filterStartTime
       console.log(`[${new Date().toISOString()}] applyFilter 完成: ${this.filteredLines.length} 行, visibleCount=${this.visibleCount}, 耗时 ${filterTime.toFixed(2)}ms`)
 
@@ -271,8 +271,8 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setFilterMode(mode: FilterMode) {
       this.filterMode = mode
-      // ✅ 修复内存泄露：过滤模式变化时重置 visibleCount
-      const filtered = this.applyFilter(true)
+      // applyFilter 会自动根据结果重置 visibleCount
+      const filtered = this.applyFilter()
       // 只有真正执行了过滤才调度渲染
       if (filtered) {
         this.scheduleRender()
@@ -284,8 +284,8 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setSearchMode(mode: SearchMode) {
       this.searchMode = mode
-      // ✅ 修复内存泄露：搜索模式变化时重置 visibleCount
-      const filtered = this.applyFilter(true)
+      // applyFilter 会自动根据结果重置 visibleCount
+      const filtered = this.applyFilter()
       // 只有真正执行了过滤才调度渲染
       if (filtered) {
         this.scheduleRender()
@@ -297,8 +297,8 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     toggleAutoDecodeEnabled() {
       this.autoDecodeEnabled = !this.autoDecodeEnabled
-      // 不重置 visibleCount，让 scheduleRender 控制渲染
-      const filtered = this.applyFilter(false)
+      // applyFilter 会自动根据结果重置 visibleCount
+      const filtered = this.applyFilter()
       // 只有真正执行了过滤才调度渲染
       if (filtered) {
         this.scheduleRender()
@@ -309,7 +309,7 @@ export const useJsonlStore = defineStore('jsonl', {
      * 应用过滤
      * @returns {boolean} 是否真的执行了过滤（false表示跳过）
      */
-    applyFilter(resetVisible: boolean = true): boolean {
+    applyFilter(): boolean {
       const funcStartTime = performance.now()
       const hasSearch = !!this.searchKeyword.trim()
 
@@ -363,10 +363,16 @@ export const useJsonlStore = defineStore('jsonl', {
       // 记录本次过滤参数
       this.lastFilterParams = currentParams
 
-      // 重置可见行数（避免渲染过多行）
-      if (resetVisible) {
-        this.resetVisibleCount()
+      // ✅ 自动重置 visibleCount（根据过滤结果）
+      const resultCount = this.filteredLines.length
+      if (resultCount <= 500) {
+        // 结果不多，直接显示全部
+        this.visibleCount = resultCount
+      } else {
+        // 结果很多，初始显示 500 行
+        this.visibleCount = 500
       }
+      console.log(`[${new Date().toISOString()}] visibleCount 重置为: ${this.visibleCount}`)
 
       const funcTime = performance.now() - funcStartTime
       console.log(`[${new Date().toISOString()}] applyFilter 完成, 总耗时 ${funcTime.toFixed(2)}ms`)
@@ -633,22 +639,6 @@ export const useJsonlStore = defineStore('jsonl', {
       } else {
         console.log(`[${new Date().toISOString()}] 无需后台渲染 (目标 <= 500)`)
         this.isRendering = false
-      }
-    },
-
-    /**
-     * 重置可见行数到合理值（根据过滤结果动态调整）
-     */
-    resetVisibleCount() {
-      // 如果过滤后结果较少，直接显示全部（避免用户需要滚动加载）
-      // 如果结果很多，从初始值开始，通过 scheduleRender 逐步渲染
-      const resultCount = this.filteredLines.length
-      if (resultCount <= 1000) {
-        // 结果少于 1000 行，直接显示全部
-        this.visibleCount = resultCount
-      } else {
-        // 结果很多，初始显示 500 行，后续每批 200 行渲染
-        this.visibleCount = 500
       }
     },
 

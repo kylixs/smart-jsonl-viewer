@@ -1,22 +1,22 @@
 /**
  * 代码高亮主题管理
  * Shiki 主题配置
+ *
+ * 注意：主题会按需动态加载，只有被使用的主题才会打包
  */
-
-import type { BundledTheme } from 'shiki'
 
 export interface CodeTheme {
   id: string
   name: string
-  lightTheme: BundledTheme
-  darkTheme: BundledTheme
+  lightTheme: string
+  darkTheme: string
   mode?: 'auto' | 'light' | 'dark' // 主题模式：自动、强制亮色、强制暗色
 }
 
 export const codeThemes: CodeTheme[] = [
   {
     id: 'github',
-    name: 'GitHub (Auto)',
+    name: 'GitHub (推荐)',
     lightTheme: 'github-light',
     darkTheme: 'github-dark',
     mode: 'auto'
@@ -36,87 +36,10 @@ export const codeThemes: CodeTheme[] = [
     mode: 'dark'
   },
   {
-    id: 'github-default',
-    name: 'GitHub Default (Auto)',
-    lightTheme: 'github-light-default',
-    darkTheme: 'github-dark-default',
-    mode: 'auto'
-  },
-  {
-    id: 'github-dimmed',
-    name: 'GitHub Dimmed (Auto)',
-    lightTheme: 'github-light',
-    darkTheme: 'github-dark-dimmed',
-    mode: 'auto'
-  },
-  {
     id: 'vscode',
-    name: 'VS Code (Auto)',
+    name: 'VS Code',
     lightTheme: 'light-plus',
     darkTheme: 'dark-plus',
-    mode: 'auto'
-  },
-  {
-    id: 'vscode-light',
-    name: 'VS Code Light',
-    lightTheme: 'light-plus',
-    darkTheme: 'light-plus',
-    mode: 'light'
-  },
-  {
-    id: 'vscode-dark',
-    name: 'VS Code Dark',
-    lightTheme: 'dark-plus',
-    darkTheme: 'dark-plus',
-    mode: 'dark'
-  },
-  {
-    id: 'one-dark-pro',
-    name: 'One Dark Pro (Auto)',
-    lightTheme: 'one-light',
-    darkTheme: 'one-dark-pro',
-    mode: 'auto'
-  },
-  {
-    id: 'solarized',
-    name: 'Solarized (Auto)',
-    lightTheme: 'solarized-light',
-    darkTheme: 'solarized-dark',
-    mode: 'auto'
-  },
-  {
-    id: 'solarized-light',
-    name: 'Solarized Light',
-    lightTheme: 'solarized-light',
-    darkTheme: 'solarized-light',
-    mode: 'light'
-  },
-  {
-    id: 'solarized-dark',
-    name: 'Solarized Dark',
-    lightTheme: 'solarized-dark',
-    darkTheme: 'solarized-dark',
-    mode: 'dark'
-  },
-  {
-    id: 'vitesse',
-    name: 'Vitesse (Auto)',
-    lightTheme: 'vitesse-light',
-    darkTheme: 'vitesse-dark',
-    mode: 'auto'
-  },
-  {
-    id: 'material',
-    name: 'Material Theme (Auto)',
-    lightTheme: 'material-theme-lighter',
-    darkTheme: 'material-theme-darker',
-    mode: 'auto'
-  },
-  {
-    id: 'nord',
-    name: 'Nord',
-    lightTheme: 'nord',
-    darkTheme: 'nord',
     mode: 'auto'
   },
   {
@@ -128,22 +51,36 @@ export const codeThemes: CodeTheme[] = [
   },
   {
     id: 'dracula',
-    name: 'Dracula (Auto)',
+    name: 'Dracula',
     lightTheme: 'dracula-soft',
     darkTheme: 'dracula',
     mode: 'auto'
   },
   {
-    id: 'tokyo-night',
-    name: 'Tokyo Night',
-    lightTheme: 'tokyo-night',
-    darkTheme: 'tokyo-night',
+    id: 'nord',
+    name: 'Nord',
+    lightTheme: 'nord',
+    darkTheme: 'nord',
+    mode: 'auto'
+  },
+  {
+    id: 'one-dark-pro',
+    name: 'One Dark Pro',
+    lightTheme: 'one-light',
+    darkTheme: 'one-dark-pro',
+    mode: 'auto'
+  },
+  {
+    id: 'solarized',
+    name: 'Solarized',
+    lightTheme: 'solarized-light',
+    darkTheme: 'solarized-dark',
     mode: 'auto'
   },
   {
     id: 'night-owl',
     name: 'Night Owl',
-    lightTheme: 'night-owl',
+    lightTheme: 'night-owl-light',
     darkTheme: 'night-owl',
     mode: 'auto'
   }

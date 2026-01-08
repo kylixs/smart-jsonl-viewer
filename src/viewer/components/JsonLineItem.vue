@@ -1,12 +1,10 @@
 <template>
   <div class="json-line-item" :class="{ expanded: line.isExpanded }">
     <div class="line-header">
-      <div class="line-info" @click="toggleExpand">
-        <span class="line-number">{{ line.lineNumber }}</span>
-        <span class="expand-icon">{{ line.isExpanded ? '▼' : '▶' }}</span>
-        <span class="line-preview">
-          {{ linePreview }}
-        </span>
+      <span class="line-number">{{ line.lineNumber }}</span>
+      <span class="expand-icon" @click="toggleExpand">{{ line.isExpanded ? '▼' : '▶' }}</span>
+      <div class="line-preview" @click="toggleExpand" v-if="!line.isExpanded">
+        {{ linePreview }}
       </div>
       <button
         class="copy-line-btn"
@@ -29,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { JsonLineNode } from '../utils/types'
 import JsonTree from './JsonTree.vue'
 import { useJsonlStore } from '../stores/jsonlStore'
@@ -46,9 +44,10 @@ const store = useJsonlStore()
 const copySuccess = ref(false)
 const copyError = ref('')
 
+// 预览内容（仅在折叠时显示）
 const linePreview = computed(() => {
   const raw = props.line.rawContent
-  const maxLength = 100
+  const maxLength = 200
 
   if (raw.length <= maxLength) {
     return raw
@@ -110,26 +109,19 @@ async function copyLine() {
 .line-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 8px 12px;
-}
-
-.line-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
   user-select: none;
-  flex: 1;
 }
 
 .line-number {
   font-family: var(--viewer-font-family);
   font-size: calc(var(--viewer-font-size) * 0.92);
   color: #999;
-  min-width: 40px;
+  min-width: 50px;
   text-align: right;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
 .expand-icon {
@@ -138,6 +130,8 @@ async function copyLine() {
   width: 16px;
   text-align: center;
   transition: transform 0.2s;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .line-preview {
@@ -148,6 +142,8 @@ async function copyLine() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  min-width: 0;
 }
 
 .line-content {
@@ -194,6 +190,8 @@ async function copyLine() {
   cursor: pointer;
   transition: all 0.2s;
   opacity: 0;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .json-line-item:hover .copy-line-btn {

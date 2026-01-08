@@ -81,8 +81,8 @@ export const useJsonlStore = defineStore('jsonl', {
     indentSize: 2,
     fontFamily: 'Monaco, Menlo, Consolas, "Courier New", monospace',
     fontSize: 13,
-    visibleCount: 100, // 初始显示 100 行
-    batchSize: 50, // 每次加载 50 行
+    visibleCount: 500, // 初始显示 500 行
+    batchSize: 200, // 每次加载 200 行
     isBackgroundLoading: false,
     loadedCount: 0,
     totalCount: 0,
@@ -252,10 +252,10 @@ export const useJsonlStore = defineStore('jsonl', {
       this.searchKeyword = keyword
 
       const filterStartTime = performance.now()
-      // 不重置 visibleCount，让 scheduleRender 控制渲染
-      const filtered = this.applyFilter(false)
+      // ✅ 修复内存泄露：搜索时重置 visibleCount，避免累积大量组件实例
+      const filtered = this.applyFilter(true)
       const filterTime = performance.now() - filterStartTime
-      console.log(`[${new Date().toISOString()}] applyFilter 完成: ${this.filteredLines.length} 行, 耗时 ${filterTime.toFixed(2)}ms`)
+      console.log(`[${new Date().toISOString()}] applyFilter 完成: ${this.filteredLines.length} 行, visibleCount=${this.visibleCount}, 耗时 ${filterTime.toFixed(2)}ms`)
 
       // 只有真正执行了过滤才调度渲染
       if (filtered) {
@@ -271,8 +271,8 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setFilterMode(mode: FilterMode) {
       this.filterMode = mode
-      // 不重置 visibleCount，让 scheduleRender 控制渲染
-      const filtered = this.applyFilter(false)
+      // ✅ 修复内存泄露：过滤模式变化时重置 visibleCount
+      const filtered = this.applyFilter(true)
       // 只有真正执行了过滤才调度渲染
       if (filtered) {
         this.scheduleRender()
@@ -284,8 +284,8 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setSearchMode(mode: SearchMode) {
       this.searchMode = mode
-      // 不重置 visibleCount，让 scheduleRender 控制渲染
-      const filtered = this.applyFilter(false)
+      // ✅ 修复内存泄露：搜索模式变化时重置 visibleCount
+      const filtered = this.applyFilter(true)
       // 只有真正执行了过滤才调度渲染
       if (filtered) {
         this.scheduleRender()
@@ -637,10 +637,19 @@ export const useJsonlStore = defineStore('jsonl', {
     },
 
     /**
-     * 重置可见行数到初始值
+     * 重置可见行数到合理值（根据过滤结果动态调整）
      */
     resetVisibleCount() {
-      this.visibleCount = 100
+      // 如果过滤后结果较少，直接显示全部（避免用户需要滚动加载）
+      // 如果结果很多，从初始值开始，通过 scheduleRender 逐步渲染
+      const resultCount = this.filteredLines.length
+      if (resultCount <= 1000) {
+        // 结果少于 1000 行，直接显示全部
+        this.visibleCount = resultCount
+      } else {
+        // 结果很多，初始显示 500 行，后续每批 200 行渲染
+        this.visibleCount = 500
+      }
     },
 
     /**

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build && npm run postbuild",
+    "build:dev": "vue-tsc && vite build --mode development && npm run postbuild",
     "postbuild": "bash scripts/post-build.sh",
     "preview": "vite preview"
   },

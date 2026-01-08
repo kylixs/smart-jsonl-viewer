@@ -236,9 +236,14 @@ const selectedCodeTheme = ref(loadCodeThemePreference())
 // Shiki 是否已初始化
 const shikiInitialized = ref(false)
 
-// 初始化设置 Shiki 主题（延迟初始化，不阻塞页面渲染）
+// 初始化设置 Shiki 主题（仅在弹窗打开且是代码内容时初始化）
 const initTheme = async () => {
   if (shikiInitialized.value) return
+
+  // 只有在弹窗打开且是代码内容时才初始化
+  if (!showModal.value || !isCodeContent.value) {
+    return
+  }
 
   const theme = getCodeThemeById(selectedCodeTheme.value)
   await setTheme(theme.lightTheme, theme.darkTheme, theme.mode || 'auto')
@@ -434,12 +439,13 @@ const highlightedCode = ref('')
 
 // 异步更新代码高亮（仅在弹窗打开时调用）
 async function updateHighlightedCode() {
-  if (!isCodeContent.value) {
-    highlightedCode.value = `<pre><code>${escapeHtml(decodedValue.value)}</code></pre>`
+  // 如果不是代码内容或弹窗未打开，不执行高亮
+  if (!isCodeContent.value || !showModal.value) {
+    highlightedCode.value = ''
     return
   }
 
-  // 确保 Shiki 已初始化
+  // 确保 Shiki 已初始化（延迟初始化）
   if (!shikiInitialized.value) {
     await initTheme()
   }
@@ -525,6 +531,35 @@ const selectedLanguageLabel = computed(() => {
   return lang ? lang.label : 'Unknown'
 })
 
+// 清理所有渲染资源，释放内存
+function cleanupResources() {
+  // 清理 Markdown HTML（包含大量 DOM 结构）
+  if (markdownHtml.value) {
+    markdownHtml.value = ''
+  }
+  markdownToc.value = []
+
+  // 清理代码高亮 HTML
+  if (highlightedCode.value) {
+    highlightedCode.value = ''
+  }
+
+  // 清理 Mermaid 渲染的 DOM 节点
+  if (mermaidInstance) {
+    try {
+      // 移除所有 Mermaid 渲染的元素
+      const mermaidElements = document.querySelectorAll('.markdown-preview .mermaid[data-processed="true"]')
+      mermaidElements.forEach(el => {
+        el.innerHTML = '' // 清空内部 SVG
+        el.removeAttribute('data-processed')
+      })
+    } catch (err) {
+      console.warn('Failed to cleanup Mermaid elements:', err)
+    }
+  }
+
+}
+
 // 弹窗打开/关闭时的处理
 watch(showModal, async (isOpen) => {
   if (isOpen) {
@@ -567,10 +602,10 @@ watch(showModal, async (isOpen) => {
     // 恢复页面滚动
     document.body.style.overflow = ''
 
-    // 弹窗关闭时清空渲染内容，释放内存
-    markdownHtml.value = ''
-    markdownToc.value = []
-    highlightedCode.value = ''
+    // 弹窗关闭时清空渲染内容，释放内存（延迟执行，确保关闭动画完成）
+    setTimeout(() => {
+      cleanupResources()
+    }, 300)
   }
 })
 
@@ -706,13 +741,21 @@ watch(showModal, (isOpen) => {
   }
 })
 
-// 组件卸载时清理事件监听
+// 组件卸载时清理所有资源
 onUnmounted(() => {
+  // 移除事件监听器
   document.removeEventListener('keydown', handleKeyDown)
+
   // 如果组件卸载时弹窗还开着，恢复页面滚动
   if (showModal.value) {
     document.body.style.overflow = ''
   }
+
+  // 彻底清理所有渲染资源
+  cleanupResources()
+
+  // 清理 Mermaid 实例
+  mermaidInstance = null
 })
 </script>
 

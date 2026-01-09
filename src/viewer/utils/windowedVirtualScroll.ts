@@ -284,7 +284,7 @@ export class WindowedVirtualScrollManager {
   }
 
   /**
-   * 加载前面的项（使用禁用滚动条方法锁定视觉位置）
+   * 加载前面的项（一次性添加+删除，避免抖动）
    */
   private loadPrevious() {
     if (this.isLoadingPrev || !this.container || !this.contentWrapper) return
@@ -302,16 +302,16 @@ export class WindowedVirtualScrollManager {
       return
     }
 
-    // 【新方法】保存当前滚动位置和视口状态
+    // 保存当前滚动位置和视口状态
     const oldScrollTop = this.container.scrollTop
     const oldScrollHeight = this.container.scrollHeight
 
-    // 【新方法】禁用滚动条，防止浏览器自动调整滚动位置
+    // 禁用滚动条，防止浏览器自动调整滚动位置
     const oldOverflow = this.container.style.overflow
     this.container.style.overflow = 'hidden'
 
     if (import.meta.env.DEV) {
-      console.log('[WindowedVirtualScroll] ===== 加载前面的项 开始 (禁用滚动条方法) =====')
+      console.log('[WindowedVirtualScroll] ===== 加载前面的项 开始 =====')
       console.log('[WindowedVirtualScroll] oldStartIndex:', this.renderWindow.startIndex)
       console.log('[WindowedVirtualScroll] newStartIndex:', newStartIndex)
       console.log('[WindowedVirtualScroll] addedCount:', addedCount)
@@ -319,10 +319,27 @@ export class WindowedVirtualScrollManager {
       console.log('[WindowedVirtualScroll] oldScrollHeight:', oldScrollHeight)
     }
 
-    // 更新窗口 - 先只添加顶部，不移除底部
+    // 【优化】一次性计算新窗口：同时添加顶部、移除底部（如果超过最大值）
+    const oldEndIndex = this.renderWindow.endIndex
     this.renderWindow.startIndex = newStartIndex
 
-    // 触发重新渲染（新项会被添加到顶部）
+    // 检查窗口大小，如果超过最大值，同时从底部移除
+    const newWindowSize = oldEndIndex - newStartIndex
+    if (newWindowSize > this.config.maxWindowSize) {
+      const overflow = newWindowSize - this.config.maxWindowSize
+      this.renderWindow.endIndex = oldEndIndex - overflow
+
+      if (import.meta.env.DEV) {
+        console.log('[WindowedVirtualScroll] 窗口溢出，同时从底部移除:', overflow)
+        console.log('[WindowedVirtualScroll] 新窗口:', {
+          startIndex: this.renderWindow.startIndex,
+          endIndex: this.renderWindow.endIndex,
+          size: this.renderWindow.endIndex - this.renderWindow.startIndex
+        })
+      }
+    }
+
+    // 【优化】只触发一次渲染（同时添加顶部 + 删除底部）
     this.onWindowChange()
 
     // 使用双重 RAF 确保 Vue 渲染完成
@@ -333,11 +350,11 @@ export class WindowedVirtualScrollManager {
           return
         }
 
-        // 【新方法】计算新增内容的高度（新 scrollHeight - 旧 scrollHeight）
+        // 计算新增内容的高度（新 scrollHeight - 旧 scrollHeight）
         const newScrollHeight = this.container.scrollHeight
         const addedHeight = newScrollHeight - oldScrollHeight
 
-        // 【新方法】调整 scrollTop，保持视觉位置不变
+        // 调整 scrollTop，保持视觉位置不变
         // 由于在顶部插入了内容，需要将 scrollTop 增加 addedHeight
         const newScrollTop = oldScrollTop + addedHeight
 
@@ -352,23 +369,8 @@ export class WindowedVirtualScrollManager {
         // 调整滚动位置
         this.container.scrollTop = newScrollTop
 
-        // 【新方法】恢复滚动条
+        // 恢复滚动条
         this.container.style.overflow = oldOverflow
-
-        // 检查窗口大小，如果超过最大值，从底部移除一些项
-        const currentWindowSize = this.renderWindow.endIndex - this.renderWindow.startIndex
-        if (currentWindowSize > this.config.maxWindowSize) {
-          const overflow = currentWindowSize - this.config.maxWindowSize
-          this.renderWindow.endIndex -= overflow
-
-          if (import.meta.env.DEV) {
-            console.log('[WindowedVirtualScroll] 窗口溢出，从底部移除:', overflow)
-          }
-
-          // 再次触发渲染，移除底部项
-          // 注意：此时不需要调整scrollTop，因为移除的是底部内容
-          this.onWindowChange()
-        }
 
         if (import.meta.env.DEV) {
           console.log('[WindowedVirtualScroll] 实际 scrollTop:', this.container.scrollTop)

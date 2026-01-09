@@ -250,9 +250,9 @@ export class WindowedVirtualScrollManager {
 
     // 计算可滚动高度（总高度 - 可见高度）
     const scrollableHeight = scrollHeight - clientHeight
-    // 触发阈值：剩余20%高度
-    const topThreshold = scrollableHeight * 0.2
-    const bottomThreshold = scrollableHeight * 0.2
+    // 触发阈值：剩余10%高度
+    const topThreshold = scrollableHeight * 0.1
+    const bottomThreshold = scrollableHeight * 0.1
 
     if (import.meta.env.DEV) {
       console.log('[WindowedVirtualScroll] 检查是否需要加载:', {
@@ -272,12 +272,12 @@ export class WindowedVirtualScrollManager {
       })
     }
 
-    // 接近顶部 - 加载前面的项（剩余20%高度时触发）
+    // 接近顶部 - 加载前面的项（剩余10%高度时触发）
     if (scrollTop < topThreshold && this.renderWindow.startIndex > 0 && !this.isLoadingPrev) {
       this.loadPrevious()
     }
 
-    // 接近底部 - 加载后面的项（剩余20%高度时触发）
+    // 接近底部 - 加载后面的项（剩余10%高度时触发）
     if (distanceToBottom < bottomThreshold && this.renderWindow.endIndex < this.totalCount && !this.isLoadingNext) {
       if (import.meta.env.DEV) {
         console.log('[WindowedVirtualScroll] ✅ 触发向下加载:', {

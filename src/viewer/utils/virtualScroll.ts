@@ -7,11 +7,9 @@ export interface VirtualScrollConfig {
   // 每行的估计高度（像素）
   itemHeight: number
   // 视窗高度（行数）- 可动态调整
-  viewportHeight: number
+  viewportRows: number
   // 缓冲区大小（前后各保留多少行）
   bufferSize: number
-  // Tail -f 模式下最大保留行数
-  maxTailLines: number
 }
 
 export interface VirtualScrollState {
@@ -33,6 +31,15 @@ export interface VirtualScrollState {
   offsetY: number
 }
 
+export interface ScrollToOptions {
+  // 对齐方式
+  align?: 'start' | 'center' | 'end'
+  // 平滑滚动
+  smooth?: boolean
+  // 高亮行
+  highlight?: boolean
+}
+
 /**
  * 虚拟滚动管理器
  */
@@ -41,10 +48,7 @@ export class VirtualScrollManager {
   private state: VirtualScrollState
   private container: HTMLElement | null = null
   private isDestroyed = false
-
-  // Tail -f 模式
-  private tailMode = false
-  private tailDataBuffer: any[] = [] // 追加数据的缓冲区
+  private scrollRAF: number | null = null
 
   constructor(config: VirtualScrollConfig) {
     this.config = config
@@ -81,35 +85,39 @@ export class VirtualScrollManager {
   /**
    * 动态调整视窗高度（行数）
    */
-  setViewportHeight(height: number) {
-    this.config.viewportHeight = height
+  setViewportRows(rows: number) {
+    this.config.viewportRows = rows
     this.updateViewport()
   }
 
   /**
-   * 处理滚动事件
+   * 处理滚动事件（带 RAF 防抖优化）
    */
   handleScroll(scrollTop: number) {
-    // Tail -f 模式下，忽略非底部的滚动
-    if (this.tailMode && this.isAtBottom()) {
-      return
+    // 取消之前的 RAF
+    if (this.scrollRAF) {
+      cancelAnimationFrame(this.scrollRAF)
     }
 
-    this.state.scrollTop = scrollTop
-    this.updateViewport()
+    // 使用 RAF 防抖
+    this.scrollRAF = requestAnimationFrame(() => {
+      this.state.scrollTop = scrollTop
+      this.updateViewport()
+      this.scrollRAF = null
+    })
   }
 
   /**
    * 更新视窗范围
    */
   private updateViewport() {
-    const { itemHeight, viewportHeight, bufferSize } = this.config
+    const { itemHeight, viewportRows, bufferSize } = this.config
     const { scrollTop, totalCount } = this.state
 
     // 计算可见区域的起始和结束索引
     const startIndex = Math.floor(scrollTop / itemHeight)
     const endIndex = Math.min(
-      startIndex + viewportHeight,
+      startIndex + viewportRows,
       totalCount
     )
 
@@ -126,11 +134,13 @@ export class VirtualScrollManager {
     this.state.renderEndIndex = renderEndIndex
     this.state.offsetY = offsetY
 
-    console.log('[VirtualScroll] 更新视窗:', {
-      可见区域: `${startIndex} - ${endIndex}`,
-      渲染区域: `${renderStartIndex} - ${renderEndIndex}`,
-      偏移量: `${offsetY}px`
-    })
+    if (import.meta.env.DEV) {
+      console.log('[VirtualScroll] 视窗更新:', {
+        可见区域: `${startIndex} - ${endIndex} (${endIndex - startIndex} 行)`,
+        渲染区域: `${renderStartIndex} - ${renderEndIndex} (${renderEndIndex - renderStartIndex} 行)`,
+        偏移量: `${offsetY}px`
+      })
+    }
   }
 
   /**
@@ -140,6 +150,16 @@ export class VirtualScrollManager {
     return {
       start: this.state.renderStartIndex,
       end: this.state.renderEndIndex
+    }
+  }
+
+  /**
+   * 获取可见视窗范围
+   */
+  getViewport(): { startIndex: number; endIndex: number } {
+    return {
+      startIndex: this.state.startIndex,
+      endIndex: this.state.endIndex
     }
   }
 
@@ -155,33 +175,73 @@ export class VirtualScrollManager {
   /**
    * 获取内容区域的样式（用于定位可见内容）
    */
-  getContentStyle(): { transform: string } {
+  getContentStyle(): { transform: string; willChange: string } {
     return {
-      transform: `translateY(${this.state.offsetY}px)`
+      transform: `translateY(${this.state.offsetY}px)`,
+      willChange: 'transform'
     }
   }
 
   /**
    * 滚动到指定索引
    */
-  scrollToIndex(index: number, behavior: 'auto' | 'smooth' = 'auto') {
-    const scrollTop = index * this.config.itemHeight
+  scrollToIndex(index: number, options: ScrollToOptions = {}) {
+    const { align = 'start', smooth = false, highlight = false } = options
+    const { itemHeight, viewportRows } = this.config
 
+    let scrollTop: number
+
+    switch (align) {
+      case 'start':
+        scrollTop = index * itemHeight
+        break
+      case 'center':
+        scrollTop = (index - Math.floor(viewportRows / 2)) * itemHeight
+        break
+      case 'end':
+        scrollTop = (index - viewportRows + 1) * itemHeight
+        break
+    }
+
+    // 边界检查
+    scrollTop = Math.max(0, Math.min(scrollTop, this.state.totalHeight - viewportRows * itemHeight))
+
+    // 执行滚动
     if (this.container) {
       this.container.scrollTo({
         top: scrollTop,
-        behavior
+        behavior: smooth ? 'smooth' : 'auto'
       })
     }
 
+    // 立即更新状态
     this.handleScroll(scrollTop)
+
+    // 高亮行（如果需要）
+    if (highlight) {
+      this.highlightRow(index)
+    }
   }
 
   /**
    * 滚动到底部
    */
-  scrollToBottom(behavior: 'auto' | 'smooth' = 'auto') {
-    this.scrollToIndex(this.state.totalCount - 1, behavior)
+  scrollToBottom(smooth: boolean = false) {
+    const lastIndex = this.state.totalCount - 1
+    this.scrollToIndex(lastIndex, {
+      align: 'end',
+      smooth
+    })
+  }
+
+  /**
+   * 滚动到顶部
+   */
+  scrollToTop(smooth: boolean = false) {
+    this.scrollToIndex(0, {
+      align: 'start',
+      smooth
+    })
   }
 
   /**
@@ -196,67 +256,27 @@ export class VirtualScrollManager {
   }
 
   /**
-   * 启用 Tail -f 模式
+   * 高亮指定行（短暂闪烁效果）
    */
-  enableTailMode() {
-    console.log('[VirtualScroll] 启用 Tail -f 模式')
-    this.tailMode = true
-    this.scrollToBottom('smooth')
+  private highlightRow(index: number) {
+    // 等待 DOM 更新后再高亮
+    setTimeout(() => {
+      const rowElement = document.querySelector(`[data-index="${index}"]`)
+      if (rowElement) {
+        rowElement.classList.add('highlight-flash')
+        setTimeout(() => {
+          rowElement.classList.remove('highlight-flash')
+        }, 1000)
+      }
+    }, 100)
   }
 
   /**
-   * 禁用 Tail -f 模式
+   * 获取总数据量
    */
-  disableTailMode() {
-    console.log('[VirtualScroll] 禁用 Tail -f 模式')
-    this.tailMode = false
+  getTotalCount(): number {
+    return this.state.totalCount
   }
-
-  /**
-   * 追加新数据（Tail -f 模式）
-   */
-  appendData(newItems: any[]) {
-    if (!this.tailMode) {
-      console.warn('[VirtualScroll] 未启用 Tail -f 模式，忽略追加数据')
-      return
-    }
-
-    // 添加到缓冲区
-    this.tailDataBuffer.push(...newItems)
-
-    // 计算新的总行数，限制最大行数
-    const newTotalCount = Math.min(
-      this.state.totalCount + newItems.length,
-      this.config.maxTailLines
-    )
-
-    // 如果超过最大行数，需要移除旧数据
-    const overflowCount = (this.state.totalCount + newItems.length) - this.config.maxTailLines
-    if (overflowCount > 0) {
-      console.log(`[VirtualScroll] Tail 模式溢出，移除前 ${overflowCount} 行`)
-      // 通知外部移除旧数据
-      this.onTailOverflow?.(overflowCount)
-    }
-
-    // 更新总数
-    this.setTotalCount(newTotalCount)
-
-    // 自动滚动到底部
-    if (this.isAtBottom()) {
-      this.scrollToBottom('smooth')
-    }
-
-    console.log('[VirtualScroll] 追加数据:', {
-      新增: newItems.length,
-      总数: newTotalCount,
-      溢出: overflowCount > 0 ? overflowCount : '无'
-    })
-  }
-
-  /**
-   * Tail 溢出回调（通知外部移除旧数据）
-   */
-  onTailOverflow?: (removeCount: number) => void
 
   /**
    * 获取当前状态快照（用于调试）
@@ -269,9 +289,14 @@ export class VirtualScrollManager {
    * 销毁
    */
   destroy() {
+    // 取消未完成的 RAF
+    if (this.scrollRAF) {
+      cancelAnimationFrame(this.scrollRAF)
+      this.scrollRAF = null
+    }
+
     this.isDestroyed = true
     this.container = null
-    this.tailDataBuffer = []
     console.log('[VirtualScroll] 已销毁')
   }
 }
@@ -279,7 +304,7 @@ export class VirtualScrollManager {
 /**
  * 计算视窗高度（根据容器高度和行高）
  */
-export function calculateViewportHeight(
+export function calculateViewportRows(
   containerHeight: number,
   itemHeight: number
 ): number {
@@ -291,9 +316,8 @@ export function calculateViewportHeight(
  */
 export function createDefaultConfig(): VirtualScrollConfig {
   return {
-    itemHeight: 40, // 每行 40px
-    viewportHeight: 20, // 默认显示 20 行
-    bufferSize: 5, // 前后各保留 5 行
-    maxTailLines: 10000 // Tail 模式最多保留 10000 行
+    itemHeight: 40,       // 每行 40px
+    viewportRows: 200,    // 默认显示 200 行
+    bufferSize: 100       // 前后各保留 100 行
   }
 }

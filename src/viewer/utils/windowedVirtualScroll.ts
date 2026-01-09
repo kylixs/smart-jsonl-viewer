@@ -60,6 +60,11 @@ export class WindowedVirtualScrollManager {
   // 是否需要用户交互才能触发下一次自动加载
   private requireUserInteraction: boolean = false
 
+  // 设置交互标志时的 scrollTop 位置
+  private interactionFlagScrollTop: number = 0
+  // 清除交互标志所需的滚动距离（像素）- 用户滚动此距离后可以再次触发加载
+  private readonly SCROLL_DISTANCE_TO_CLEAR: number = 200
+
   // 滚动停止检测定时器
   private scrollStopTimer: number | null = null
   // 滚动停止延迟（毫秒）- 滚动停止后才清除交互标志
@@ -122,21 +127,40 @@ export class WindowedVirtualScrollManager {
     // 检测是否为用户主动滚动（不是加载中，也不是编程式滚动）
     if (!this.isLoadingPrev && !this.isLoadingNext && !this.isProgrammaticScroll) {
       // 这是用户主动滚动，启动滚动停止检测器
-      // 只有滚动停止后才清除"需要用户交互"标志
-      if (this.requireUserInteraction) {
-        // 清除之前的定时器
-        if (this.scrollStopTimer !== null) {
-          window.clearTimeout(this.scrollStopTimer)
-        }
+      // 清除"需要用户交互"标志的两种方式：
+      // 1. 用户滚动了足够的距离（200px）
+      // 2. 用户停止滚动 300ms
+      if (this.requireUserInteraction && this.container) {
+        const currentScrollTop = this.container.scrollTop
+        const scrollDistance = Math.abs(currentScrollTop - this.interactionFlagScrollTop)
 
-        // 设置新的定时器：滚动停止 300ms 后清除标志
-        this.scrollStopTimer = window.setTimeout(() => {
+        // 方式1：如果滚动距离超过阈值，立即清除标志
+        if (scrollDistance >= this.SCROLL_DISTANCE_TO_CLEAR) {
           this.requireUserInteraction = false
-          this.scrollStopTimer = null
-          if (import.meta.env.DEV) {
-            console.log('[WindowedVirtualScroll] 滚动已停止，清除交互标志')
+          // 清除滚动停止定时器（不再需要）
+          if (this.scrollStopTimer !== null) {
+            window.clearTimeout(this.scrollStopTimer)
+            this.scrollStopTimer = null
           }
-        }, this.SCROLL_STOP_DELAY)
+          if (import.meta.env.DEV) {
+            console.log('[WindowedVirtualScroll] 滚动距离已达到阈值，清除交互标志')
+          }
+        } else {
+          // 方式2：滚动距离不够，使用滚动停止检测
+          // 清除之前的定时器
+          if (this.scrollStopTimer !== null) {
+            window.clearTimeout(this.scrollStopTimer)
+          }
+
+          // 设置新的定时器：滚动停止 300ms 后清除标志
+          this.scrollStopTimer = window.setTimeout(() => {
+            this.requireUserInteraction = false
+            this.scrollStopTimer = null
+            if (import.meta.env.DEV) {
+              console.log('[WindowedVirtualScroll] 滚动已停止，清除交互标志')
+            }
+          }, this.SCROLL_STOP_DELAY)
+        }
       }
     }
 
@@ -156,6 +180,11 @@ export class WindowedVirtualScrollManager {
 
     // 设置交互标志，防止立即触发新的加载
     this.requireUserInteraction = true
+
+    // 记录设置标志时的滚动位置，用于后续的距离检测
+    if (this.container) {
+      this.interactionFlagScrollTop = this.container.scrollTop
+    }
 
     if (import.meta.env.DEV) {
       console.log('[WindowedVirtualScroll] 已清除所有自动滚动任务，设置交互标志')

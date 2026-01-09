@@ -63,12 +63,12 @@ export class WindowedVirtualScrollManager {
   // 滚动停止检测定时器
   private scrollStopTimer: number | null = null
   // 滚动停止延迟（毫秒）- 滚动停止后才清除交互标志
-  private readonly SCROLL_STOP_DELAY: number = 1000
+  private readonly SCROLL_STOP_DELAY: number = 300
 
   // 上次加载的时间戳（用于防抖）
   private lastLoadTime: number = 0
   // 防抖间隔（毫秒）- 防止加载过快
-  private readonly DEBOUNCE_INTERVAL: number = 800
+  private readonly DEBOUNCE_INTERVAL: number = 300
 
   constructor(config: Partial<WindowedScrollConfig> = {}) {
     this.config = {
@@ -290,18 +290,8 @@ export class WindowedVirtualScrollManager {
       console.log('[WindowedVirtualScroll] oldScrollHeight:', oldScrollHeight)
     }
 
-    // 更新窗口
+    // 更新窗口 - 先只添加顶部，不移除底部
     this.renderWindow.startIndex = newStartIndex
-
-    // 检查窗口大小，如果超过最大值，从底部移除一些项
-    const currentWindowSize = this.renderWindow.endIndex - this.renderWindow.startIndex
-    if (currentWindowSize > this.config.maxWindowSize) {
-      const overflow = currentWindowSize - this.config.maxWindowSize
-      this.renderWindow.endIndex -= overflow
-      if (import.meta.env.DEV) {
-        console.log('[WindowedVirtualScroll] 窗口溢出，从底部移除:', overflow)
-      }
-    }
 
     // 触发重新渲染（新项会被添加到顶部）
     this.onWindowChange()
@@ -336,9 +326,23 @@ export class WindowedVirtualScrollManager {
         // 【新方法】恢复滚动条
         this.container.style.overflow = oldOverflow
 
+        // 检查窗口大小，如果超过最大值，从底部移除一些项
+        const currentWindowSize = this.renderWindow.endIndex - this.renderWindow.startIndex
+        if (currentWindowSize > this.config.maxWindowSize) {
+          const overflow = currentWindowSize - this.config.maxWindowSize
+          this.renderWindow.endIndex -= overflow
+
+          if (import.meta.env.DEV) {
+            console.log('[WindowedVirtualScroll] 窗口溢出，从底部移除:', overflow)
+          }
+
+          // 再次触发渲染，移除底部项
+          // 注意：此时不需要调整scrollTop，因为移除的是底部内容
+          this.onWindowChange()
+        }
+
         if (import.meta.env.DEV) {
           console.log('[WindowedVirtualScroll] 实际 scrollTop:', this.container.scrollTop)
-          console.log('[WindowedVirtualScroll] 滚动条已恢复')
           console.log('[WindowedVirtualScroll] ===== 加载前面的项 完成 =====')
         }
 

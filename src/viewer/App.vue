@@ -747,6 +747,9 @@ body {
   transition: background 0.3s, color 0.3s;
   font-family: var(--viewer-font-family);
   font-size: var(--viewer-font-size);
+  /* 使用 flexbox 布局，让 main 自动占据剩余空间 */
+  display: flex;
+  flex-direction: column;
 }
 
 #app.dark {
@@ -1133,7 +1136,13 @@ body {
 }
 
 .app-main {
-  min-height: calc(100vh - 80px);
+  /* 使用 flex: 1 让 main 占据剩余空间（除去 header 和 SearchFilter） */
+  flex: 1;
+  /* 防止内容溢出 */
+  overflow: hidden;
+  /* 设置为 flex 容器，让内部元素可以填充 */
+  display: flex;
+  flex-direction: column;
 }
 
 /* 加载中区域 */
@@ -1141,7 +1150,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 200px);
+  /* 使用 flex: 1 填充 app-main 的剩余空间 */
+  flex: 1;
   margin: 40px;
 }
 
@@ -1180,7 +1190,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 200px);
+  /* 使用 flex: 1 填充 app-main 的剩余空间 */
+  flex: 1;
   margin: 40px;
   border: 3px dashed #ddd;
   border-radius: 12px;
@@ -1438,8 +1449,9 @@ body {
 .jsonl-content {
   background: #fff;
   padding: 0;
-  height: calc(100vh - 80px); /* 填充整个视口高度，减去header高度 */
-  overflow: hidden; /* 防止外层滚动条，只使用 VirtualScrollList 的滚动 */
+  /* 填充父容器（app-main）的全部高度 */
+  height: 100%;
+  overflow: visible; /* 允许 VirtualScrollList 的滚动条显示 */
 }
 
 .lines-list {

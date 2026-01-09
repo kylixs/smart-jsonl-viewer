@@ -250,7 +250,7 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  overflow-y: scroll;  /* 改为 scroll 强制显示滚动条 */
   overflow-x: hidden;
   /* 平滑滚动 */
   scroll-behavior: smooth;
@@ -259,8 +259,9 @@ defineExpose({
 /* 内容区域 */
 .content-wrapper {
   width: 100%;
-  /* 添加底部 padding，确保最后几行完全可见 */
-  padding-bottom: 20px;
+  /* 添加底部 padding，确保展开的最后一项能完全显示 */
+  /* 设置为 800px，足以容纳最高的展开项（约 760px） */
+  padding-bottom: 100px;
 }
 
 /* 虚拟项包装器 */

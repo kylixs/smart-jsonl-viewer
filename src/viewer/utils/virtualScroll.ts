@@ -1,0 +1,299 @@
+/**
+ * 虚拟滚动核心实现
+ * 只渲染可见区域 + 缓冲区的内容，自动释放超出范围的 DOM
+ */
+
+export interface VirtualScrollConfig {
+  // 每行的估计高度（像素）
+  itemHeight: number
+  // 视窗高度（行数）- 可动态调整
+  viewportHeight: number
+  // 缓冲区大小（前后各保留多少行）
+  bufferSize: number
+  // Tail -f 模式下最大保留行数
+  maxTailLines: number
+}
+
+export interface VirtualScrollState {
+  // 总数据行数
+  totalCount: number
+  // 滚动位置（像素）
+  scrollTop: number
+  // 当前视窗的起始索引
+  startIndex: number
+  // 当前视窗的结束索引（不含）
+  endIndex: number
+  // 实际渲染的起始索引（包含缓冲区）
+  renderStartIndex: number
+  // 实际渲染的结束索引（包含缓冲区）
+  renderEndIndex: number
+  // 虚拟容器总高度（用于滚动条）
+  totalHeight: number
+  // 偏移量（用于定位可见区域）
+  offsetY: number
+}
+
+/**
+ * 虚拟滚动管理器
+ */
+export class VirtualScrollManager {
+  private config: VirtualScrollConfig
+  private state: VirtualScrollState
+  private container: HTMLElement | null = null
+  private isDestroyed = false
+
+  // Tail -f 模式
+  private tailMode = false
+  private tailDataBuffer: any[] = [] // 追加数据的缓冲区
+
+  constructor(config: VirtualScrollConfig) {
+    this.config = config
+    this.state = {
+      totalCount: 0,
+      scrollTop: 0,
+      startIndex: 0,
+      endIndex: 0,
+      renderStartIndex: 0,
+      renderEndIndex: 0,
+      totalHeight: 0,
+      offsetY: 0
+    }
+  }
+
+  /**
+   * 初始化虚拟滚动容器
+   */
+  init(container: HTMLElement, totalCount: number) {
+    this.container = container
+    this.setTotalCount(totalCount)
+    this.updateViewport()
+  }
+
+  /**
+   * 设置总数据量
+   */
+  setTotalCount(count: number) {
+    this.state.totalCount = count
+    this.state.totalHeight = count * this.config.itemHeight
+    this.updateViewport()
+  }
+
+  /**
+   * 动态调整视窗高度（行数）
+   */
+  setViewportHeight(height: number) {
+    this.config.viewportHeight = height
+    this.updateViewport()
+  }
+
+  /**
+   * 处理滚动事件
+   */
+  handleScroll(scrollTop: number) {
+    // Tail -f 模式下，忽略非底部的滚动
+    if (this.tailMode && this.isAtBottom()) {
+      return
+    }
+
+    this.state.scrollTop = scrollTop
+    this.updateViewport()
+  }
+
+  /**
+   * 更新视窗范围
+   */
+  private updateViewport() {
+    const { itemHeight, viewportHeight, bufferSize } = this.config
+    const { scrollTop, totalCount } = this.state
+
+    // 计算可见区域的起始和结束索引
+    const startIndex = Math.floor(scrollTop / itemHeight)
+    const endIndex = Math.min(
+      startIndex + viewportHeight,
+      totalCount
+    )
+
+    // 计算包含缓冲区的渲染范围
+    const renderStartIndex = Math.max(0, startIndex - bufferSize)
+    const renderEndIndex = Math.min(totalCount, endIndex + bufferSize)
+
+    // 计算偏移量（用于定位）
+    const offsetY = renderStartIndex * itemHeight
+
+    this.state.startIndex = startIndex
+    this.state.endIndex = endIndex
+    this.state.renderStartIndex = renderStartIndex
+    this.state.renderEndIndex = renderEndIndex
+    this.state.offsetY = offsetY
+
+    console.log('[VirtualScroll] 更新视窗:', {
+      可见区域: `${startIndex} - ${endIndex}`,
+      渲染区域: `${renderStartIndex} - ${renderEndIndex}`,
+      偏移量: `${offsetY}px`
+    })
+  }
+
+  /**
+   * 获取当前应该渲染的数据索引范围
+   */
+  getRenderRange(): { start: number; end: number } {
+    return {
+      start: this.state.renderStartIndex,
+      end: this.state.renderEndIndex
+    }
+  }
+
+  /**
+   * 获取虚拟容器的样式（用于撑开滚动条）
+   */
+  getContainerStyle(): { height: string } {
+    return {
+      height: `${this.state.totalHeight}px`
+    }
+  }
+
+  /**
+   * 获取内容区域的样式（用于定位可见内容）
+   */
+  getContentStyle(): { transform: string } {
+    return {
+      transform: `translateY(${this.state.offsetY}px)`
+    }
+  }
+
+  /**
+   * 滚动到指定索引
+   */
+  scrollToIndex(index: number, behavior: 'auto' | 'smooth' = 'auto') {
+    const scrollTop = index * this.config.itemHeight
+
+    if (this.container) {
+      this.container.scrollTo({
+        top: scrollTop,
+        behavior
+      })
+    }
+
+    this.handleScroll(scrollTop)
+  }
+
+  /**
+   * 滚动到底部
+   */
+  scrollToBottom(behavior: 'auto' | 'smooth' = 'auto') {
+    this.scrollToIndex(this.state.totalCount - 1, behavior)
+  }
+
+  /**
+   * 判断是否在底部
+   */
+  isAtBottom(): boolean {
+    const { scrollTop, totalHeight } = this.state
+    const containerHeight = this.container?.clientHeight || 0
+
+    // 允许 5px 的误差
+    return scrollTop + containerHeight >= totalHeight - 5
+  }
+
+  /**
+   * 启用 Tail -f 模式
+   */
+  enableTailMode() {
+    console.log('[VirtualScroll] 启用 Tail -f 模式')
+    this.tailMode = true
+    this.scrollToBottom('smooth')
+  }
+
+  /**
+   * 禁用 Tail -f 模式
+   */
+  disableTailMode() {
+    console.log('[VirtualScroll] 禁用 Tail -f 模式')
+    this.tailMode = false
+  }
+
+  /**
+   * 追加新数据（Tail -f 模式）
+   */
+  appendData(newItems: any[]) {
+    if (!this.tailMode) {
+      console.warn('[VirtualScroll] 未启用 Tail -f 模式，忽略追加数据')
+      return
+    }
+
+    // 添加到缓冲区
+    this.tailDataBuffer.push(...newItems)
+
+    // 计算新的总行数，限制最大行数
+    const newTotalCount = Math.min(
+      this.state.totalCount + newItems.length,
+      this.config.maxTailLines
+    )
+
+    // 如果超过最大行数，需要移除旧数据
+    const overflowCount = (this.state.totalCount + newItems.length) - this.config.maxTailLines
+    if (overflowCount > 0) {
+      console.log(`[VirtualScroll] Tail 模式溢出，移除前 ${overflowCount} 行`)
+      // 通知外部移除旧数据
+      this.onTailOverflow?.(overflowCount)
+    }
+
+    // 更新总数
+    this.setTotalCount(newTotalCount)
+
+    // 自动滚动到底部
+    if (this.isAtBottom()) {
+      this.scrollToBottom('smooth')
+    }
+
+    console.log('[VirtualScroll] 追加数据:', {
+      新增: newItems.length,
+      总数: newTotalCount,
+      溢出: overflowCount > 0 ? overflowCount : '无'
+    })
+  }
+
+  /**
+   * Tail 溢出回调（通知外部移除旧数据）
+   */
+  onTailOverflow?: (removeCount: number) => void
+
+  /**
+   * 获取当前状态快照（用于调试）
+   */
+  getState(): Readonly<VirtualScrollState> {
+    return { ...this.state }
+  }
+
+  /**
+   * 销毁
+   */
+  destroy() {
+    this.isDestroyed = true
+    this.container = null
+    this.tailDataBuffer = []
+    console.log('[VirtualScroll] 已销毁')
+  }
+}
+
+/**
+ * 计算视窗高度（根据容器高度和行高）
+ */
+export function calculateViewportHeight(
+  containerHeight: number,
+  itemHeight: number
+): number {
+  return Math.ceil(containerHeight / itemHeight)
+}
+
+/**
+ * 创建虚拟滚动管理器的默认配置
+ */
+export function createDefaultConfig(): VirtualScrollConfig {
+  return {
+    itemHeight: 40, // 每行 40px
+    viewportHeight: 20, // 默认显示 20 行
+    bufferSize: 5, // 前后各保留 5 行
+    maxTailLines: 10000 // Tail 模式最多保留 10000 行
+  }
+}

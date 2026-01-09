@@ -60,10 +60,15 @@ export class WindowedVirtualScrollManager {
   // 是否需要用户交互才能触发下一次自动加载
   private requireUserInteraction: boolean = false
 
+  // 滚动停止检测定时器
+  private scrollStopTimer: number | null = null
+  // 滚动停止延迟（毫秒）- 滚动停止后才清除交互标志
+  private readonly SCROLL_STOP_DELAY: number = 1000
+
   // 上次加载的时间戳（用于防抖）
   private lastLoadTime: number = 0
-  // 防抖间隔（毫秒）
-  private readonly DEBOUNCE_INTERVAL: number = 150
+  // 防抖间隔（毫秒）- 防止加载过快
+  private readonly DEBOUNCE_INTERVAL: number = 800
 
   constructor(config: Partial<WindowedScrollConfig> = {}) {
     this.config = {
@@ -116,16 +121,45 @@ export class WindowedVirtualScrollManager {
   private handleScroll = () => {
     // 检测是否为用户主动滚动（不是加载中，也不是编程式滚动）
     if (!this.isLoadingPrev && !this.isLoadingNext && !this.isProgrammaticScroll) {
-      // 这是用户主动滚动，清除"需要用户交互"标志
+      // 这是用户主动滚动，启动滚动停止检测器
+      // 只有滚动停止后才清除"需要用户交互"标志
       if (this.requireUserInteraction) {
-        if (import.meta.env.DEV) {
-          console.log('[WindowedVirtualScroll] 检测到用户主动滚动，清除交互标志')
+        // 清除之前的定时器
+        if (this.scrollStopTimer !== null) {
+          window.clearTimeout(this.scrollStopTimer)
         }
-        this.requireUserInteraction = false
+
+        // 设置新的定时器：滚动停止 300ms 后清除标志
+        this.scrollStopTimer = window.setTimeout(() => {
+          this.requireUserInteraction = false
+          this.scrollStopTimer = null
+          if (import.meta.env.DEV) {
+            console.log('[WindowedVirtualScroll] 滚动已停止，清除交互标志')
+          }
+        }, this.SCROLL_STOP_DELAY)
       }
     }
 
     this.checkAndLoadMore()
+  }
+
+  /**
+   * 清除所有自动滚动任务，并设置交互标志
+   * 在插入内容、调整 scrollOffset 后调用
+   */
+  private cancelAutoScrollTasks() {
+    // 清除滚动停止定时器
+    if (this.scrollStopTimer !== null) {
+      window.clearTimeout(this.scrollStopTimer)
+      this.scrollStopTimer = null
+    }
+
+    // 设置交互标志，防止立即触发新的加载
+    this.requireUserInteraction = true
+
+    if (import.meta.env.DEV) {
+      console.log('[WindowedVirtualScroll] 已清除所有自动滚动任务，设置交互标志')
+    }
   }
 
   /**
@@ -310,12 +344,8 @@ export class WindowedVirtualScrollManager {
 
         this.isLoadingPrev = false
 
-        // 设置需要用户交互标志，防止连续自动加载
-        this.requireUserInteraction = true
-
-        if (import.meta.env.DEV) {
-          console.log('[WindowedVirtualScroll] 已设置需要用户交互标志')
-        }
+        // 清除所有自动滚动任务，防止连续自动加载
+        this.cancelAutoScrollTasks()
       })
     })
   }
@@ -358,22 +388,14 @@ export class WindowedVirtualScrollManager {
 
         this.isLoadingNext = false
 
-        // 设置需要用户交互标志，防止连续自动加载
-        this.requireUserInteraction = true
-
-        if (import.meta.env.DEV) {
-          console.log('[WindowedVirtualScroll] 已设置需要用户交互标志')
-        }
+        // 清除所有自动滚动任务，防止连续自动加载
+        this.cancelAutoScrollTasks()
       })
     } else {
       this.isLoadingNext = false
 
-      // 设置需要用户交互标志，防止连续自动加载
-      this.requireUserInteraction = true
-
-      if (import.meta.env.DEV) {
-        console.log('[WindowedVirtualScroll] 已设置需要用户交互标志')
-      }
+      // 清除所有自动滚动任务，防止连续自动加载
+      this.cancelAutoScrollTasks()
     }
 
     if (import.meta.env.DEV) {
@@ -592,6 +614,12 @@ export class WindowedVirtualScrollManager {
     if (this.programmaticScrollTimer !== null) {
       clearTimeout(this.programmaticScrollTimer)
       this.programmaticScrollTimer = null
+    }
+
+    // 清除滚动停止定时器
+    if (this.scrollStopTimer !== null) {
+      window.clearTimeout(this.scrollStopTimer)
+      this.scrollStopTimer = null
     }
 
     this.container = null

@@ -306,9 +306,16 @@ export class WindowedVirtualScrollManager {
     const oldScrollTop = this.container.scrollTop
     const oldScrollHeight = this.container.scrollHeight
 
-    // 禁用滚动条，防止浏览器自动调整滚动位置
+    // 完全禁用滚动和平滑滚动行为，防止浏览器自动调整滚动位置
     const oldOverflow = this.container.style.overflow
+    const oldOverflowY = this.container.style.overflowY
+    const oldScrollBehavior = this.container.style.scrollBehavior
+    const oldPointerEvents = this.container.style.pointerEvents
+
     this.container.style.overflow = 'hidden'
+    this.container.style.overflowY = 'hidden'
+    this.container.style.scrollBehavior = 'auto'  // 禁用平滑滚动
+    this.container.style.pointerEvents = 'none'   // 禁用鼠标事件
 
     if (import.meta.env.DEV) {
       console.log('[WindowedVirtualScroll] ===== 加载前面的项 开始 =====')
@@ -369,8 +376,11 @@ export class WindowedVirtualScrollManager {
         // 调整滚动位置
         this.container.scrollTop = newScrollTop
 
-        // 恢复滚动条
+        // 恢复所有滚动相关属性
         this.container.style.overflow = oldOverflow
+        this.container.style.overflowY = oldOverflowY
+        this.container.style.scrollBehavior = oldScrollBehavior
+        this.container.style.pointerEvents = oldPointerEvents
 
         if (import.meta.env.DEV) {
           console.log('[WindowedVirtualScroll] 实际 scrollTop:', this.container.scrollTop)

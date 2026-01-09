@@ -248,33 +248,41 @@ export class WindowedVirtualScrollManager {
     const clientHeight = this.container.clientHeight
     const distanceToBottom = scrollHeight - (scrollTop + clientHeight)
 
+    // 计算可滚动高度（总高度 - 可见高度）
+    const scrollableHeight = scrollHeight - clientHeight
+    // 触发阈值：剩余20%高度
+    const topThreshold = scrollableHeight * 0.2
+    const bottomThreshold = scrollableHeight * 0.2
+
     if (import.meta.env.DEV) {
       console.log('[WindowedVirtualScroll] 检查是否需要加载:', {
         scrollTop,
         scrollHeight,
         clientHeight,
+        scrollableHeight,
         distanceToBottom,
-        loadThreshold: this.config.loadThreshold,
+        topThreshold,
+        bottomThreshold,
         currentWindow: this.renderWindow,
         totalCount: this.totalCount,
-        '是否到达底部?': distanceToBottom < this.config.loadThreshold,
+        '是否到达顶部?': scrollTop < topThreshold,
+        '是否到达底部?': distanceToBottom < bottomThreshold,
         '还有更多数据?': this.renderWindow.endIndex < this.totalCount,
-        '是否正在加载?': this.isLoadingNext,
-        '能否触发加载?': distanceToBottom < this.config.loadThreshold && this.renderWindow.endIndex < this.totalCount && !this.isLoadingNext
+        '是否正在加载?': this.isLoadingNext
       })
     }
 
-    // 接近顶部 - 加载前面的项
-    if (scrollTop < this.config.loadThreshold && this.renderWindow.startIndex > 0 && !this.isLoadingPrev) {
+    // 接近顶部 - 加载前面的项（剩余20%高度时触发）
+    if (scrollTop < topThreshold && this.renderWindow.startIndex > 0 && !this.isLoadingPrev) {
       this.loadPrevious()
     }
 
-    // 接近底部 - 加载后面的项
-    if (distanceToBottom < this.config.loadThreshold && this.renderWindow.endIndex < this.totalCount && !this.isLoadingNext) {
+    // 接近底部 - 加载后面的项（剩余20%高度时触发）
+    if (distanceToBottom < bottomThreshold && this.renderWindow.endIndex < this.totalCount && !this.isLoadingNext) {
       if (import.meta.env.DEV) {
         console.log('[WindowedVirtualScroll] ✅ 触发向下加载:', {
           distanceToBottom,
-          threshold: this.config.loadThreshold,
+          threshold: bottomThreshold,
           endIndex: this.renderWindow.endIndex,
           totalCount: this.totalCount
         })
@@ -305,6 +313,37 @@ export class WindowedVirtualScrollManager {
     // 保存当前滚动位置和视口状态
     const oldScrollTop = this.container.scrollTop
     const oldScrollHeight = this.container.scrollHeight
+    const oldStartIndex = this.renderWindow.startIndex
+    const oldEndIndex = this.renderWindow.endIndex
+
+    // 计算窗口大小，判断是否需要删除底部
+    const newWindowSize = oldEndIndex - newStartIndex
+    let removedBottomHeight = 0
+
+    // 【关键】如果窗口超过最大值，先测量要删除的底部元素高度
+    if (newWindowSize > this.config.maxWindowSize) {
+      const overflow = newWindowSize - this.config.maxWindowSize
+      // 计算要删除的底部元素范围：从 (oldEndIndex - overflow) 到 oldEndIndex
+      const removeStartIndex = oldEndIndex - overflow
+      const relativeStartIndex = removeStartIndex - oldStartIndex
+      const relativeEndIndex = oldEndIndex - oldStartIndex
+
+      // 测量这些元素的高度
+      for (let i = relativeStartIndex; i < relativeEndIndex && i < this.contentWrapper.children.length; i++) {
+        const child = this.contentWrapper.children[i] as HTMLElement
+        removedBottomHeight += child.offsetHeight
+      }
+
+      if (import.meta.env.DEV) {
+        console.log('[WindowedVirtualScroll] 将要删除底部元素:', {
+          overflow,
+          removeStartIndex,
+          relativeStartIndex,
+          relativeEndIndex,
+          removedBottomHeight
+        })
+      }
+    }
 
     // 完全禁用滚动和平滑滚动行为，防止浏览器自动调整滚动位置
     const oldOverflow = this.container.style.overflow
@@ -319,34 +358,26 @@ export class WindowedVirtualScrollManager {
 
     if (import.meta.env.DEV) {
       console.log('[WindowedVirtualScroll] ===== 加载前面的项 开始 =====')
-      console.log('[WindowedVirtualScroll] oldStartIndex:', this.renderWindow.startIndex)
+      console.log('[WindowedVirtualScroll] oldStartIndex:', oldStartIndex)
       console.log('[WindowedVirtualScroll] newStartIndex:', newStartIndex)
       console.log('[WindowedVirtualScroll] addedCount:', addedCount)
       console.log('[WindowedVirtualScroll] oldScrollTop:', oldScrollTop)
       console.log('[WindowedVirtualScroll] oldScrollHeight:', oldScrollHeight)
     }
 
-    // 【优化】一次性计算新窗口：同时添加顶部、移除底部（如果超过最大值）
-    const oldEndIndex = this.renderWindow.endIndex
+    // 【修复】一次性更新窗口：添加顶部 + 删除底部（如果需要）
     this.renderWindow.startIndex = newStartIndex
 
-    // 检查窗口大小，如果超过最大值，同时从底部移除
-    const newWindowSize = oldEndIndex - newStartIndex
     if (newWindowSize > this.config.maxWindowSize) {
       const overflow = newWindowSize - this.config.maxWindowSize
       this.renderWindow.endIndex = oldEndIndex - overflow
 
       if (import.meta.env.DEV) {
-        console.log('[WindowedVirtualScroll] 窗口溢出，同时从底部移除:', overflow)
-        console.log('[WindowedVirtualScroll] 新窗口:', {
-          startIndex: this.renderWindow.startIndex,
-          endIndex: this.renderWindow.endIndex,
-          size: this.renderWindow.endIndex - this.renderWindow.startIndex
-        })
+        console.log('[WindowedVirtualScroll] 同时删除底部:', overflow)
       }
     }
 
-    // 【优化】只触发一次渲染（同时添加顶部 + 删除底部）
+    // 触发渲染（添加顶部 + 可能删除底部）
     this.onWindowChange()
 
     // 使用双重 RAF 确保 Vue 渲染完成
@@ -357,18 +388,24 @@ export class WindowedVirtualScrollManager {
           return
         }
 
-        // 计算新增内容的高度（新 scrollHeight - 旧 scrollHeight）
+        // 【关键修复】计算真实的顶部新增高度
+        // newScrollHeight = oldScrollHeight + topAddedHeight - bottomRemovedHeight
+        // 因此：topAddedHeight = (newScrollHeight - oldScrollHeight) + bottomRemovedHeight
         const newScrollHeight = this.container.scrollHeight
-        const addedHeight = newScrollHeight - oldScrollHeight
+        const heightDelta = newScrollHeight - oldScrollHeight
+        const realTopAddedHeight = heightDelta + removedBottomHeight
 
         // 调整 scrollTop，保持视觉位置不变
-        // 由于在顶部插入了内容，需要将 scrollTop 增加 addedHeight
-        const newScrollTop = oldScrollTop + addedHeight
+        // 由于在顶部插入了内容，需要将 scrollTop 增加真实的顶部新增高度
+        const newScrollTop = oldScrollTop + realTopAddedHeight
 
         if (import.meta.env.DEV) {
           console.log('[WindowedVirtualScroll] 计算位置调整:')
+          console.log('[WindowedVirtualScroll] - oldScrollHeight:', oldScrollHeight)
           console.log('[WindowedVirtualScroll] - newScrollHeight:', newScrollHeight)
-          console.log('[WindowedVirtualScroll] - addedHeight:', addedHeight)
+          console.log('[WindowedVirtualScroll] - heightDelta:', heightDelta)
+          console.log('[WindowedVirtualScroll] - removedBottomHeight:', removedBottomHeight)
+          console.log('[WindowedVirtualScroll] - realTopAddedHeight:', realTopAddedHeight)
           console.log('[WindowedVirtualScroll] - oldScrollTop:', oldScrollTop)
           console.log('[WindowedVirtualScroll] - newScrollTop:', newScrollTop)
         }
@@ -414,33 +451,24 @@ export class WindowedVirtualScrollManager {
       return
     }
 
-    // 更新窗口
+    // 更新窗口：添加底部，同时检查是否需要删除顶部
     const oldEndIndex = this.renderWindow.endIndex
     this.renderWindow.endIndex = newEndIndex
 
-    // 检查窗口大小，如果超过最大值，从顶部移除一些项
+    // 检查窗口大小，如果超过最大值，从顶部移除一些项（删除顶部不影响 scrollTop）
     const currentWindowSize = this.renderWindow.endIndex - this.renderWindow.startIndex
     if (currentWindowSize > this.config.maxWindowSize) {
       const overflow = currentWindowSize - this.config.maxWindowSize
       this.renderWindow.startIndex += overflow
 
-      // 如果从顶部移除了项，需要调整滚动位置
-      requestAnimationFrame(() => {
-        if (!this.container || !this.contentWrapper) return
-
-        // 减去顶部padding，因为那些项已经不在DOM中了
-        this.topPadding = 0
-
-        this.isLoadingNext = false
-
-        // 清除所有自动滚动任务，防止连续自动加载
-        this.cancelAutoScrollTasks()
-      })
-    } else {
-      this.isLoadingNext = false
-
-      // 清除所有自动滚动任务，防止连续自动加载
-      this.cancelAutoScrollTasks()
+      if (import.meta.env.DEV) {
+        console.log('[WindowedVirtualScroll] 窗口超过最大值，从顶部移除:', overflow)
+        console.log('[WindowedVirtualScroll] 新窗口:', {
+          startIndex: this.renderWindow.startIndex,
+          endIndex: this.renderWindow.endIndex,
+          size: this.renderWindow.endIndex - this.renderWindow.startIndex
+        })
+      }
     }
 
     if (import.meta.env.DEV) {
@@ -452,8 +480,14 @@ export class WindowedVirtualScrollManager {
       })
     }
 
-    // 触发重新渲染
+    // 触发重新渲染（添加底部 + 可能删除顶部）
     this.onWindowChange()
+
+    // 删除顶部不需要调整 scrollTop，直接完成
+    this.isLoadingNext = false
+
+    // 清除所有自动滚动任务，防止连续自动加载
+    this.cancelAutoScrollTasks()
   }
 
   /**

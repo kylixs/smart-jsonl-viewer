@@ -2,23 +2,21 @@
   <div
     ref="scrollContainerRef"
     class="virtual-scroll-container"
-    @scroll="handleScroll"
   >
-    <!-- 虚拟撑开容器（用于撑开滚动条） -->
-    <div class="virtual-spacer" :style="spacerStyle"></div>
-
     <!-- 实际渲染的内容区域 -->
-    <div class="content-wrapper" :style="contentStyle">
-      <slot
+    <div ref="contentWrapperRef" class="content-wrapper">
+      <div
         v-for="item in visibleItems"
         :key="item.id"
-        :item="item"
+        class="virtual-item-wrapper"
       >
-        <!-- 默认插槽，父组件可以自定义渲染 -->
-        <div class="virtual-item" :data-index="item.index">
-          {{ item }}
-        </div>
-      </slot>
+        <slot :item="item" :index="item.index">
+          <!-- 默认插槽，父组件可以自定义渲染 -->
+          <div class="virtual-item">
+            {{ item }}
+          </div>
+        </slot>
+      </div>
     </div>
   </div>
 </template>
@@ -26,176 +24,168 @@
 <script setup lang="ts" generic="T extends { id: string | number }">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
-  VirtualScrollManager,
-  type VirtualScrollConfig,
-  type ScrollToOptions
-} from '../utils/virtualScroll'
+  WindowedVirtualScrollManager
+} from '../utils/windowedVirtualScroll'
+
+console.log('[VirtualScrollList] script setup - 组件定义执行')
 
 // Props
 interface Props {
   // 数据源（过滤后的数据）
   items: T[]
-  // 每行高度（像素）
-  itemHeight?: number
-  // 视窗行数
-  viewportRows?: number
-  // 缓冲区大小
-  bufferSize?: number
+  // 初始窗口大小（项数）
+  initialWindowSize?: number
+  // 触发加载的阈值（像素）
+  loadThreshold?: number
+  // 每次加载的批次大小（项数）
+  batchSize?: number
+  // 最大窗口大小（项数）
+  maxWindowSize?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  itemHeight: 40,
-  viewportRows: 200,
-  bufferSize: 100
+  initialWindowSize: 100,
+  loadThreshold: 200,              // 降低到200px，更容易触发
+  batchSize: 50,
+  maxWindowSize: Number.MAX_SAFE_INTEGER
 })
 
 // Emits
 const emit = defineEmits<{
-  'viewport-change': [{ startIndex: number; endIndex: number }]
+  'window-change': [{ startIndex: number; endIndex: number }]
+  'scroll': []
 }>()
 
 // Refs
 const scrollContainerRef = ref<HTMLElement | null>(null)
-const scrollManager = ref<VirtualScrollManager | null>(null)
-const renderRange = ref({ start: 0, end: 0 })
+const contentWrapperRef = ref<HTMLElement | null>(null)
+const scrollManager = ref<WindowedVirtualScrollManager | null>(null)
+const renderWindow = ref({ startIndex: 0, endIndex: 0 })
 
 // Computed - 可见项
 const visibleItems = computed(() => {
-  const { start, end } = renderRange.value
-  return props.items.slice(start, end).map((item, idx) => ({
+  const { startIndex, endIndex } = renderWindow.value
+
+  if (import.meta.env.DEV) {
+    console.log('[VirtualScrollList] 计算可见项:', {
+      items总长度: props.items.length,
+      renderWindow: { startIndex, endIndex },
+      切片数量: endIndex - startIndex
+    })
+  }
+
+  return props.items.slice(startIndex, endIndex).map((item, idx) => ({
     ...item,
-    index: start + idx
+    index: startIndex + idx
   }))
-})
-
-// Computed - 虚拟容器样式
-const spacerStyle = computed(() => {
-  if (!scrollManager.value) {
-    return { height: '0px' }
-  }
-  return scrollManager.value.getContainerStyle()
-})
-
-// Computed - 内容区域样式
-const contentStyle = computed(() => {
-  if (!scrollManager.value) {
-    return { transform: 'translateY(0px)', willChange: 'transform' }
-  }
-  return scrollManager.value.getContentStyle()
 })
 
 // 初始化虚拟滚动管理器
 function initScrollManager() {
-  if (!scrollContainerRef.value) {
+  if (!scrollContainerRef.value || !contentWrapperRef.value) {
     console.error('[VirtualScrollList] 容器未挂载')
     return
   }
 
-  const config: VirtualScrollConfig = {
-    itemHeight: props.itemHeight,
-    viewportRows: props.viewportRows,
-    bufferSize: props.bufferSize
+  const config = {
+    initialWindowSize: props.initialWindowSize,
+    loadThreshold: props.loadThreshold,
+    batchSize: props.batchSize,
+    maxWindowSize: props.maxWindowSize
   }
 
-  scrollManager.value = new VirtualScrollManager(config)
-  scrollManager.value.init(scrollContainerRef.value, props.items.length)
+  scrollManager.value = new WindowedVirtualScrollManager(config)
+  scrollManager.value.init(
+    scrollContainerRef.value,
+    contentWrapperRef.value,
+    props.items.length
+  )
 
-  // 初始化渲染范围
-  updateRenderRange()
+  // 设置窗口变化回调
+  scrollManager.value.setWindowChangeCallback(() => {
+    updateRenderWindow()
+  })
+
+  // 初始化渲染窗口
+  updateRenderWindow()
+
+  // 监听滚动事件，通知父组件
+  if (scrollContainerRef.value) {
+    scrollContainerRef.value.addEventListener('scroll', () => {
+      emit('scroll')
+    })
+  }
 
   if (import.meta.env.DEV) {
     console.log('[VirtualScrollList] 初始化完成:', {
       总数据量: props.items.length,
-      视窗行数: props.viewportRows,
-      缓冲区大小: props.bufferSize
+      初始窗口大小: props.initialWindowSize,
+      加载阈值: props.loadThreshold,
+      批次大小: props.batchSize
     })
   }
 }
 
-// 更新渲染范围
-function updateRenderRange() {
+// 更新渲染窗口
+function updateRenderWindow() {
   if (!scrollManager.value) return
 
-  const range = scrollManager.value.getRenderRange()
-  renderRange.value = range
-
-  // 发出视窗变化事件
-  const viewport = scrollManager.value.getViewport()
-  emit('viewport-change', viewport)
-}
-
-// 处理滚动事件
-function handleScroll(event: Event) {
-  if (!scrollManager.value) return
-
-  const target = event.target as HTMLElement
-  scrollManager.value.handleScroll(target.scrollTop)
-  updateRenderRange()
-}
-
-// 处理窗口大小变化
-function handleResize() {
-  if (!scrollContainerRef.value || !scrollManager.value) return
-
-  const containerHeight = scrollContainerRef.value.clientHeight
-  const newViewportRows = Math.ceil(containerHeight / props.itemHeight)
-
-  scrollManager.value.setViewportRows(newViewportRows)
-  updateRenderRange()
+  const window = scrollManager.value.getRenderWindow()
 
   if (import.meta.env.DEV) {
-    console.log('[VirtualScrollList] 窗口大小变化:', {
-      容器高度: containerHeight,
-      新视窗行数: newViewportRows
-    })
+    console.log('[VirtualScrollList] updateRenderWindow - 获取到 window:', window)
+  }
+
+  renderWindow.value = window
+
+  // 发出窗口变化事件
+  emit('window-change', window)
+
+  if (import.meta.env.DEV) {
+    console.log('[VirtualScrollList] updateRenderWindow - renderWindow 已更新为:', renderWindow.value)
   }
 }
 
-// 监听数据变化
-watch(() => props.items.length, (newLength) => {
-  if (!scrollManager.value) return
+// 监听 items 变化
+watch(
+  () => props.items.length,
+  (newLength) => {
+    if (!scrollManager.value) return
 
-  scrollManager.value.setTotalCount(newLength)
-  updateRenderRange()
+    if (import.meta.env.DEV) {
+      console.log('[VirtualScrollList] items 数量变化:', newLength)
+    }
 
-  if (import.meta.env.DEV) {
-    console.log('[VirtualScrollList] 数据量变化:', {
-      新数据量: newLength
-    })
+    scrollManager.value.updateTotalCount(newLength)
+    updateRenderWindow()
   }
-})
+)
 
 // 监听配置变化
 watch(
-  () => [props.itemHeight, props.viewportRows, props.bufferSize] as const,
-  ([newItemHeight, newViewportRows, newBufferSize]) => {
+  () => [props.initialWindowSize, props.loadThreshold, props.batchSize, props.maxWindowSize] as const,
+  () => {
     if (!scrollManager.value) return
 
-    // 重新创建管理器（配置变化较少，直接重建更简单）
+    // 配置变化时重新初始化
     scrollManager.value.destroy()
     initScrollManager()
 
     if (import.meta.env.DEV) {
-      console.log('[VirtualScrollList] 配置变化:', {
-        行高: newItemHeight,
-        视窗行数: newViewportRows,
-        缓冲区: newBufferSize
-      })
+      console.log('[VirtualScrollList] 配置变化，重新初始化')
     }
   }
 )
 
 // 生命周期
 onMounted(() => {
-  initScrollManager()
+  console.log('[VirtualScrollList] onMounted - 组件已挂载')
+  console.log('[VirtualScrollList] 此时 items.length:', props.items.length)
 
-  // 监听窗口大小变化
-  window.addEventListener('resize', handleResize)
+  initScrollManager()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-
   if (scrollManager.value) {
     scrollManager.value.destroy()
     scrollManager.value = null
@@ -207,8 +197,8 @@ defineExpose({
   /**
    * 滚动到指定索引
    */
-  scrollToIndex(index: number, options?: ScrollToOptions) {
-    scrollManager.value?.scrollToIndex(index, options)
+  scrollToIndex(index: number, smooth = false) {
+    scrollManager.value?.scrollToIndex(index, smooth)
   },
 
   /**
@@ -240,17 +230,17 @@ defineExpose({
   },
 
   /**
-   * 获取当前视窗范围
+   * 获取当前渲染窗口
    */
-  getViewport() {
-    return scrollManager.value?.getViewport() ?? { startIndex: 0, endIndex: 0 }
+  getRenderWindow() {
+    return scrollManager.value?.getRenderWindow() ?? { startIndex: 0, endIndex: 0 }
   },
 
   /**
    * 获取总数据量
    */
   getTotalCount(): number {
-    return scrollManager.value?.getTotalCount() ?? 0
+    return props.items.length
   }
 })
 </script>
@@ -266,24 +256,16 @@ defineExpose({
   scroll-behavior: smooth;
 }
 
-/* 虚拟撑开容器 */
-.virtual-spacer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  /* 用于撑开滚动条高度 */
-}
-
 /* 内容区域 */
 .content-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* GPU 加速 */
-  will-change: transform;
+  width: 100%;
+  /* 添加底部 padding，确保最后几行完全可见 */
+  padding-bottom: 20px;
+}
+
+/* 虚拟项包装器 */
+.virtual-item-wrapper {
+  width: 100%;
 }
 
 /* 默认项样式 */
@@ -299,14 +281,12 @@ defineExpose({
 }
 
 @keyframes highlight-pulse {
-  0% {
+  0%,
+  100% {
     background-color: transparent;
   }
   50% {
-    background-color: #ffeb3b;
-  }
-  100% {
-    background-color: transparent;
+    background-color: rgba(255, 193, 7, 0.3);
   }
 }
 </style>

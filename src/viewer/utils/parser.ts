@@ -31,14 +31,15 @@ export function parseJsonLines(text: string): JsonLineNode[] {
 
 /**
  * 增量解析 JSONL（首屏快速显示，后台继续解析）
+ * 注意：当前禁用了后台加载，一次性解析全部数据
  */
 export function parseJsonLinesIncremental(
   text: string,
-  initialBatchSize: number = 100,
+  _initialBatchSize: number = 100,  // 保留参数以兼容调用方，但不使用
   onProgress?: (lines: JsonLineNode[], isComplete: boolean) => void
 ): JsonLineNode[] {
   const funcStartTime = performance.now()
-  console.log(`[${new Date().toISOString()}] parseJsonLinesIncremental 开始`)
+  console.log(`[${new Date().toISOString()}] parseJsonLinesIncremental 开始（一次性加载模式）`)
 
   const splitStartTime = performance.now()
   const allLines = text.split('\n').filter((line) => line.trim())
@@ -47,12 +48,11 @@ export function parseJsonLinesIncremental(
 
   const result: JsonLineNode[] = []
 
-  // 首先解析前 N 行，快速返回
-  const firstBatch = Math.min(initialBatchSize, allLines.length)
-  const firstBatchStartTime = performance.now()
-  console.log(`[${new Date().toISOString()}] 开始解析首批 ${firstBatch} 行`)
+  // 一次性解析所有行
+  const parseStartTime = performance.now()
+  console.log(`[${new Date().toISOString()}] 开始一次性解析 ${allLines.length} 行`)
 
-  for (let i = 0; i < firstBatch; i++) {
+  for (let i = 0; i < allLines.length; i++) {
     try {
       const parsedData = JSON.parse(allLines[i])
       result.push({
@@ -69,86 +69,19 @@ export function parseJsonLinesIncremental(
     }
   }
 
-  const firstBatchTime = performance.now() - firstBatchStartTime
-  console.log(`[${new Date().toISOString()}] 首批解析完成: ${result.length} 行, 耗时 ${firstBatchTime.toFixed(2)}ms`)
+  const parseTime = performance.now() - parseStartTime
+  console.log(`[${new Date().toISOString()}] 解析完成: ${result.length} 行, 耗时 ${parseTime.toFixed(2)}ms`)
 
-  // 回调首批数据
+  // 回调全部数据，isComplete=true
   if (onProgress) {
     const callbackStartTime = performance.now()
-    onProgress([...result], allLines.length <= firstBatch)
+    onProgress([...result], true)
     const callbackTime = performance.now() - callbackStartTime
-    console.log(`[${new Date().toISOString()}] 首批进度回调完成, 耗时 ${callbackTime.toFixed(2)}ms`)
+    console.log(`[${new Date().toISOString()}] 进度回调完成, 耗时 ${callbackTime.toFixed(2)}ms`)
   }
 
   const funcTime = performance.now() - funcStartTime
-  console.log(`[${new Date().toISOString()}] parseJsonLinesIncremental 同步部分完成, 总耗时 ${funcTime.toFixed(2)}ms`)
-
-  // 后台异步解析剩余行
-  if (allLines.length > firstBatch) {
-    console.log(`[${new Date().toISOString()}] 启动后台解析: 剩余 ${allLines.length - firstBatch} 行`)
-    const backgroundStartTime = performance.now()
-
-    const parseRemaining = (startIndex: number) => {
-      const batchStartTime = performance.now()
-      const batchSize = 500 // 每批解析500行
-      const endIndex = Math.min(startIndex + batchSize, allLines.length)
-
-      console.log(`[${new Date().toISOString()}] 后台批次开始: 行 ${startIndex}-${endIndex}`)
-
-      for (let i = startIndex; i < endIndex; i++) {
-        try {
-          const parsedData = JSON.parse(allLines[i])
-          result.push({
-            id: `line-${i}`,
-            lineNumber: i + 1,
-            rawContent: allLines[i],
-            parsedData,
-            isExpanded: false,
-            decodedStrings: new Map(),
-            decodedText: extractDecodedText(parsedData)
-          })
-        } catch (error) {
-          console.warn(`Failed to parse line ${i + 1}:`, error)
-        }
-      }
-
-      const batchTime = performance.now() - batchStartTime
-      console.log(`[${new Date().toISOString()}] 后台批次完成: 解析 ${endIndex - startIndex} 行, 耗时 ${batchTime.toFixed(2)}ms`)
-
-      // 通知进度
-      if (onProgress) {
-        const callbackStartTime = performance.now()
-        const isComplete = endIndex >= allLines.length
-        onProgress([...result], isComplete)
-        const callbackTime = performance.now() - callbackStartTime
-        console.log(`[${new Date().toISOString()}] 进度回调完成: ${result.length}/${allLines.length} 行, isComplete=${isComplete}, 耗时 ${callbackTime.toFixed(2)}ms`)
-
-        if (isComplete) {
-          const totalBackgroundTime = performance.now() - backgroundStartTime
-          console.log(`[${new Date().toISOString()}] 后台解析全部完成, 后台总耗时 ${totalBackgroundTime.toFixed(2)}ms`)
-        }
-      }
-
-      // 继续解析下一批
-      if (endIndex < allLines.length) {
-        // 使用 requestIdleCallback 或 setTimeout
-        if (typeof requestIdleCallback !== 'undefined') {
-          requestIdleCallback(() => parseRemaining(endIndex))
-        } else {
-          setTimeout(() => parseRemaining(endIndex), 0)
-        }
-      }
-    }
-
-    // 启动后台解析
-    if (typeof requestIdleCallback !== 'undefined') {
-      requestIdleCallback(() => parseRemaining(firstBatch))
-    } else {
-      setTimeout(() => parseRemaining(firstBatch), 0)
-    }
-  } else {
-    console.log(`[${new Date().toISOString()}] 无需后台解析 (总行数 <= ${initialBatchSize})`)
-  }
+  console.log(`[${new Date().toISOString()}] parseJsonLinesIncremental 完成, 总耗时 ${funcTime.toFixed(2)}ms`)
 
   return result
 }

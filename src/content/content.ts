@@ -36,27 +36,38 @@ if (shouldIntercept()) {
   async function tryBackgroundFetch(url: string): Promise<string | null> {
     try {
       const fetchStart = performance.now()
-      console.log('[JSONL Viewer] 🚀 尝试通过 background 读取文件')
+      const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      console.log('[JSONL Viewer] 🚀 尝试通过 background 读取文件, requestId:', requestId)
 
       // 设置 5 秒超时，防止 background fetch 卡住
       const messagePromise = chrome.runtime.sendMessage({
         type: 'FETCH_FILE',
-        url: url
+        url: url,
+        requestId: requestId
       })
 
       const timeoutPromise = new Promise<null>((resolve) => {
         setTimeout(() => {
-          console.log('[JSONL Viewer] background fetch 超时（5秒）')
+          console.log('[JSONL Viewer] background fetch 超时（5秒）, requestId:', requestId)
           resolve(null)
         }, 5000)
       })
 
       const response = await Promise.race([messagePromise, timeoutPromise])
 
+      // 验证响应的 requestId 是否匹配
+      if (response && response.requestId !== requestId) {
+        console.error('[JSONL Viewer] ❌ requestId 不匹配! 期望:', requestId, '实际:', response.requestId)
+        console.error('[JSONL Viewer] 这可能是多标签页导致的响应错乱，丢弃此响应')
+        return null
+      }
+
       if (response && response.success) {
         const fetchEnd = performance.now()
         console.log(
-          '[JSONL Viewer] ✅ background 读取成功，耗时:',
+          '[JSONL Viewer] ✅ background 读取成功，requestId:',
+          requestId,
+          '耗时:',
           (fetchEnd - fetchStart).toFixed(2),
           'ms，内容大小:',
           response.content.length

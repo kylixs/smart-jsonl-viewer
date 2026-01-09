@@ -1,11 +1,26 @@
 <template>
   <div class="json-line-item" :class="{ expanded: line.isExpanded }">
-    <div class="line-header">
+    <div class="line-row">
+      <!-- 行号（最左侧） -->
       <span class="line-number">{{ line.lineNumber }}</span>
-      <span class="expand-icon" @click="toggleExpand">{{ line.isExpanded ? '▼' : '▶' }}</span>
-      <div class="line-preview" @click="toggleExpand" v-if="!line.isExpanded">
-        {{ linePreview }}
+      <!-- 展开箭头（仅在折叠时显示） -->
+      <span v-if="!line.isExpanded" class="expand-icon" @click="toggleExpand">▶</span>
+      <!-- JSON 内容（展开前后都在同一行） -->
+      <div class="line-content" @click="toggleExpand">
+        <JsonTree
+          :data="line.parsedData"
+          :depth="0"
+          :max-depth="line.isExpanded ? store.expandDepth : 0"
+          :inline="!line.isExpanded"
+          :preview-max-length="200"
+        />
       </div>
+      <!-- 匹配路径（如果有） -->
+      <div v-if="line.isExpanded && line.matchedPath" class="matched-path">
+        <span class="path-icon">📍</span>
+        <span class="path-text">{{ line.matchedPath }}</span>
+      </div>
+      <!-- 复制按钮 -->
       <button
         class="copy-line-btn"
         @click.stop="copyLine"
@@ -15,19 +30,11 @@
         {{ copySuccess ? '✓' : copyError ? '✗' : '📋' }}
       </button>
     </div>
-
-    <div v-if="line.isExpanded" class="line-content">
-      <div v-if="line.matchedPath" class="matched-path">
-        <span class="path-icon">📍</span>
-        <span class="path-text">{{ line.matchedPath }}</span>
-      </div>
-      <JsonTree :data="line.parsedData" :depth="0" :max-depth="store.expandDepth" />
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { JsonLineNode } from '../utils/types'
 import JsonTree from './JsonTree.vue'
 import { useJsonlStore } from '../stores/jsonlStore'
@@ -45,16 +52,16 @@ const copySuccess = ref(false)
 const copyError = ref('')
 
 // 预览内容（仅在折叠时显示）
-const linePreview = computed(() => {
-  const raw = props.line.rawContent
-  const maxLength = 200
-
-  if (raw.length <= maxLength) {
-    return raw
-  }
-
-  return raw.substring(0, maxLength) + '...'
-})
+// const linePreview = computed(() => {
+//   const raw = props.line.rawContent
+//   const maxLength = 200
+//
+//   if (raw.length <= maxLength) {
+//     return raw
+//   }
+//
+//   return raw.substring(0, maxLength) + '...'
+// })
 
 function toggleExpand() {
   store.toggleLineExpand(props.line.id)
@@ -106,22 +113,23 @@ async function copyLine() {
   background: #f9f9f9;
 }
 
-.line-header {
+.line-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 8px 12px;
-  user-select: none;
+  padding: 12px 16px;
+  position: relative;
 }
 
 .line-number {
   font-family: var(--viewer-font-family);
-  font-size: calc(var(--viewer-font-size) * 0.92);
+  font-size: calc(var(--viewer-font-size) * 0.9);
   color: #999;
   min-width: 50px;
   text-align: right;
   font-weight: 500;
   flex-shrink: 0;
+  line-height: 1.5;
 }
 
 .expand-icon {
@@ -132,39 +140,36 @@ async function copyLine() {
   transition: transform 0.2s;
   flex-shrink: 0;
   cursor: pointer;
+  line-height: 1.5;
+  margin-top: 1px;
 }
 
-.line-preview {
-  font-family: var(--viewer-font-family);
-  font-size: var(--viewer-font-size);
+.expand-icon:hover {
   color: #333;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-  min-width: 0;
 }
 
 .line-content {
-  padding: 16px 24px;
-  background: #fafafa;
-  width: 100%;
-  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
 }
 
 .matched-path {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  margin-bottom: 8px;
+  padding: 4px 10px;
+  margin-left: auto;
   background: #f5f5f5;
   border-left: 2px solid #ddd;
   border-radius: 3px;
   font-family: var(--viewer-font-family);
   font-size: calc(var(--viewer-font-size) * 0.85);
-  opacity: 0.8;
+  opacity: 0.85;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .path-icon {
@@ -190,8 +195,11 @@ async function copyLine() {
   cursor: pointer;
   transition: all 0.2s;
   opacity: 0;
-  margin-left: auto;
   flex-shrink: 0;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .json-line-item:hover .copy-line-btn {
@@ -225,12 +233,12 @@ async function copyLine() {
   color: #999;
 }
 
-:root.dark .line-preview {
+:root.dark .expand-icon:hover {
   color: #ddd;
 }
 
 :root.dark .line-content {
-  background: #1e1e1e;
+  color: #ddd;
 }
 
 :root.dark .copy-line-btn {

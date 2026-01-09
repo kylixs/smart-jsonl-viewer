@@ -37,23 +37,13 @@ interface JsonlState {
   fontFamily: string
   // 字体大小（像素）
   fontSize: number
-  // 当前可见行数（用于分页加载优化）
-  visibleCount: number
-  // 每次加载的批次大小
-  batchSize: number
   // 后台加载状态
   isBackgroundLoading: boolean
-  // 已加载的行数
+  // 已加载行数
   loadedCount: number
-  // 总行数（预估）
+  // 总行数
   totalCount: number
-  // 渲染状态
-  isRendering: boolean
-  // 已渲染行数
-  renderedCount: number
-  // 渲染防抖定时器
-  renderDebounceTimer: number | undefined
-  // 上次过滤使用的参数（用于避免重复过滤）
+  // 上次过滤参数（用于优化，避免重复过滤）
   lastFilterParams: {
     keyword: string
     filterMode: FilterMode
@@ -81,30 +71,19 @@ export const useJsonlStore = defineStore('jsonl', {
     indentSize: 2,
     fontFamily: 'Monaco, Menlo, Consolas, "Courier New", monospace',
     fontSize: 13,
-    visibleCount: 500, // 初始显示 500 行
-    batchSize: 200, // 每次加载 200 行
     isBackgroundLoading: false,
     loadedCount: 0,
     totalCount: 0,
-    isRendering: false,
-    renderedCount: 0,
-    renderDebounceTimer: undefined,
     lastFilterParams: null,
     currentRenderTaskId: 0,
   }),
 
   getters: {
-    // 当前显示的行（分页优化，只渲染可见部分）
-    displayLines: (state) => state.filteredLines.slice(0, state.visibleCount),
-
     // 总行数
     totalLines: (state) => state.allLines.length,
 
     // 过滤后的行数
     filteredCount: (state) => state.filteredLines.length,
-
-    // 是否还有更多数据可以加载
-    hasMore: (state) => state.visibleCount < state.filteredLines.length,
 
     // 是否有搜索
     hasSearch: (state) => state.searchKeyword.trim() !== '',
@@ -121,74 +100,31 @@ export const useJsonlStore = defineStore('jsonl', {
 
   actions: {
     /**
-     * 加载文本内容（使用增量解析，首屏快速，后台继续）
+     * 加载文本内容（一次性加载全部数据）
      */
     loadText(text: string) {
       const funcStartTime = performance.now()
       console.log(`[${new Date().toISOString()}] ========== loadText 开始 ==========`)
       console.log(`[${new Date().toISOString()}] 文本长度: ${text.length} 字符`)
+      console.log(`[${new Date().toISOString()}] 当前 allLines 长度: ${this.allLines.length}`)
+      console.log(`[${new Date().toISOString()}] 当前 filteredLines 长度: ${this.filteredLines.length}`)
+      console.log(`[${new Date().toISOString()}] 文本前100字符: ${text.substring(0, 100)}`)
+      console.log(`[${new Date().toISOString()}] 文本最后100字符: ${text.substring(Math.max(0, text.length - 100))}`)
 
-      // 估算总行数（用于进度显示）
-      const estimateStartTime = performance.now()
-      const estimatedLines = text.split('\n').filter(line => line.trim()).length
-      const estimateTime = performance.now() - estimateStartTime
-      console.log(`[${new Date().toISOString()}] 估算行数: ${estimatedLines}, 耗时 ${estimateTime.toFixed(2)}ms`)
+      // 重置过滤参数，确保新数据会触发过滤
+      this.lastFilterParams = null
 
-      this.totalCount = estimatedLines
-      this.loadedCount = 0
-      this.isBackgroundLoading = true
-      this.lastFilterParams = null // 重置过滤参数，确保新数据会触发过滤
-
-      // 使用增量解析，处理进度回调
+      // 使用一次性解析（不再有后台加载）
       const parseStartTime = performance.now()
       const result = parseTextIncremental(text, (lines, isComplete) => {
-        const callbackStartTime = performance.now()
-        console.log(`[${new Date().toISOString()}] ===== Store 进度回调 =====`)
-        console.log(`[${new Date().toISOString()}] lines=${lines.length}, isComplete=${isComplete}`)
-
-        // 更新已加载行数
-        this.loadedCount = lines.length
-
-        // 更新数据（后台解析的批次数据）
-        const updateStartTime = performance.now()
-        this.allLines = lines
-        this.allLines.forEach((line) => {
-          line.isExpanded = true
-        })
-        const updateTime = performance.now() - updateStartTime
-        console.log(`[${new Date().toISOString()}] allLines 更新完成, 耗时 ${updateTime.toFixed(2)}ms`)
-
-        // 加载完成
-        if (isComplete) {
-          const filterStartTime = performance.now()
-          // 后台加载完成时才执行过滤，避免加载期间重复过滤
-          const filtered = this.applyFilter()
-          const filterTime = performance.now() - filterStartTime
-          console.log(`[${new Date().toISOString()}] applyFilter 完成, 耗时 ${filterTime.toFixed(2)}ms`)
-
-          this.isBackgroundLoading = false
-          this.loadedCount = this.totalCount
-
-          // 只有真正执行了过滤才调度渲染
-          if (filtered) {
-            console.log(`[${new Date().toISOString()}] 后台加载完成，调度渲染`)
-            this.scheduleRender()
-          }
-
-          const callbackTime = performance.now() - callbackStartTime
-          console.log(`[${new Date().toISOString()}] ===== 后台加载完成 ===== 回调总耗时 ${callbackTime.toFixed(2)}ms`)
-        } else {
-          // 后台加载中，只更新数据不过滤（避免重复过滤）
-          const callbackTime = performance.now() - callbackStartTime
-          console.log(`[${new Date().toISOString()}] 后台加载中, 耗时 ${callbackTime.toFixed(2)}ms`)
-        }
+        console.log(`[${new Date().toISOString()}] 解析完成回调: lines=${lines.length}, isComplete=${isComplete}`)
       })
 
       const parseTime = performance.now() - parseStartTime
       console.log(`[${new Date().toISOString()}] parseTextIncremental 返回: type=${result.type}, data=${result.data ? result.data.length : null} 行, 耗时 ${parseTime.toFixed(2)}ms`)
 
       if (result.data) {
-        // 首次同步返回的数据（前100行），立即显示
+        // 一次性加载所有数据
         const initStartTime = performance.now()
         this.allLines = result.data
         this.fileType = result.type
@@ -204,14 +140,13 @@ export const useJsonlStore = defineStore('jsonl', {
         console.log(`[${new Date().toISOString()}] applyFilter 完成, 耗时 ${filterTime.toFixed(2)}ms`)
 
         const funcTime = performance.now() - funcStartTime
-        console.log(`[${new Date().toISOString()}] 首批数据已加载: ${this.allLines.length} 行`)
-        console.log(`[${new Date().toISOString()}] ========== loadText 同步部分完成 ========== 总耗时 ${funcTime.toFixed(2)}ms`)
+        console.log(`[${new Date().toISOString()}] 数据已加载: ${this.allLines.length} 行`)
+        console.log(`[${new Date().toISOString()}] ========== loadText 完成 ========== 总耗时 ${funcTime.toFixed(2)}ms`)
       } else {
         console.error(`[${new Date().toISOString()}] 解析失败: result.data 为 null`)
         this.allLines = []
         this.filteredLines = []
         this.fileType = null
-        this.isBackgroundLoading = false
         throw new Error('Invalid JSON or JSONL format')
       }
     },
@@ -258,15 +193,9 @@ export const useJsonlStore = defineStore('jsonl', {
       this.searchKeyword = keyword
 
       const filterStartTime = performance.now()
-      // ✅ applyFilter 会自动根据结果重置 visibleCount
-      const filtered = this.applyFilter()
+      this.applyFilter()
       const filterTime = performance.now() - filterStartTime
-      console.log(`[${new Date().toISOString()}] applyFilter 完成: ${this.filteredLines.length} 行, visibleCount=${this.visibleCount}, 耗时 ${filterTime.toFixed(2)}ms`)
-
-      // 只有真正执行了过滤才调度渲染
-      if (filtered) {
-        this.scheduleRender()
-      }
+      console.log(`[${new Date().toISOString()}] applyFilter 完成: ${this.filteredLines.length} 行, 耗时 ${filterTime.toFixed(2)}ms`)
 
       const funcTime = performance.now() - funcStartTime
       console.log(`[${new Date().toISOString()}] ===== setSearchKeyword 完成 ===== 总耗时 ${funcTime.toFixed(2)}ms`)
@@ -277,12 +206,7 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setFilterMode(mode: FilterMode) {
       this.filterMode = mode
-      // applyFilter 会自动根据结果重置 visibleCount
-      const filtered = this.applyFilter()
-      // 只有真正执行了过滤才调度渲染
-      if (filtered) {
-        this.scheduleRender()
-      }
+      this.applyFilter()
     },
 
     /**
@@ -290,12 +214,7 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     setSearchMode(mode: SearchMode) {
       this.searchMode = mode
-      // applyFilter 会自动根据结果重置 visibleCount
-      const filtered = this.applyFilter()
-      // 只有真正执行了过滤才调度渲染
-      if (filtered) {
-        this.scheduleRender()
-      }
+      this.applyFilter()
     },
 
     /**
@@ -303,12 +222,7 @@ export const useJsonlStore = defineStore('jsonl', {
      */
     toggleAutoDecodeEnabled() {
       this.autoDecodeEnabled = !this.autoDecodeEnabled
-      // applyFilter 会自动根据结果重置 visibleCount
-      const filtered = this.applyFilter()
-      // 只有真正执行了过滤才调度渲染
-      if (filtered) {
-        this.scheduleRender()
-      }
+      this.applyFilter()
     },
 
     /**
@@ -356,8 +270,8 @@ export const useJsonlStore = defineStore('jsonl', {
       }
 
       if (!hasSearch) {
-        this.filteredLines = this.allLines
-        console.log(`[${new Date().toISOString()}] 无搜索，直接使用全部数据`)
+        this.filteredLines = [...this.allLines]
+        console.log(`[${new Date().toISOString()}] 无搜索，直接使用全部数据 (${this.allLines.length} 行)`)
       } else {
         const filterStartTime = performance.now()
         this.filteredLines = filterJsonLines(
@@ -373,17 +287,6 @@ export const useJsonlStore = defineStore('jsonl', {
 
       // 记录本次过滤参数
       this.lastFilterParams = currentParams
-
-      // ✅ 自动重置 visibleCount（根据过滤结果）
-      const resultCount = this.filteredLines.length
-      if (resultCount <= 500) {
-        // 结果不多，直接显示全部
-        this.visibleCount = resultCount
-      } else {
-        // 结果很多，初始显示 500 行
-        this.visibleCount = 500
-      }
-      console.log(`[${new Date().toISOString()}] visibleCount 重置为: ${this.visibleCount}`)
 
       const funcTime = performance.now() - funcStartTime
       console.log(`[${new Date().toISOString()}] applyFilter 完成, 总耗时 ${funcTime.toFixed(2)}ms`)
@@ -540,120 +443,6 @@ export const useJsonlStore = defineStore('jsonl', {
     },
 
     /**
-     * 加载更多行（分页加载优化）
-     */
-    loadMore() {
-      this.visibleCount = Math.min(
-        this.visibleCount + this.batchSize,
-        this.filteredLines.length
-      )
-    },
-
-    /**
-     * 加载所有行（搜索时使用）
-     */
-    loadAll() {
-      this.visibleCount = this.filteredLines.length
-    },
-
-    /**
-     * 调度渲染（带防抖，避免短时间内重复渲染）
-     */
-    scheduleRender() {
-      console.log(`[${new Date().toISOString()}] scheduleRender 被调用`)
-
-      // 清除之前的定时器
-      if (this.renderDebounceTimer) {
-        clearTimeout(this.renderDebounceTimer)
-        console.log(`[${new Date().toISOString()}] 清除之前的渲染定时器`)
-      }
-
-      // 10ms 防抖（过滤已经很快，减少延迟）
-      this.renderDebounceTimer = window.setTimeout(() => {
-        console.log(`[${new Date().toISOString()}] 防抖触发，开始渐进式渲染`)
-        this.renderDebounceTimer = undefined
-
-        // 任何时候都渐进式渲染全部结果
-        this.progressiveRender(this.filteredLines.length)
-      }, 10)
-    },
-
-    /**
-     * 渐进式渲染：首批快速显示，后台异步渲染剩余行
-     */
-    progressiveRender(targetCount: number) {
-      const funcStartTime = performance.now()
-      console.log(`[${new Date().toISOString()}] ===== progressiveRender 开始 =====`)
-      console.log(`[${new Date().toISOString()}] 目标渲染: ${targetCount} 行`)
-
-      // 递增任务ID，取消之前的渲染任务
-      this.currentRenderTaskId++
-      const taskId = this.currentRenderTaskId
-      console.log(`[${new Date().toISOString()}] 渲染任务ID: ${taskId}`)
-
-      // 首批渲染：立即显示前 500 行（或更少）
-      const initialBatch = Math.min(500, targetCount)
-      this.visibleCount = initialBatch
-      this.renderedCount = initialBatch
-      this.isRendering = targetCount > initialBatch
-
-      const funcTime = performance.now() - funcStartTime
-      console.log(`[${new Date().toISOString()}] 首批渲染完成: ${initialBatch} 行, 耗时 ${funcTime.toFixed(2)}ms`)
-
-      // 如果需要渲染更多行，启动后台渐进渲染
-      if (targetCount > initialBatch) {
-        console.log(`[${new Date().toISOString()}] 启动后台渲染: 剩余 ${targetCount - initialBatch} 行`)
-        const backgroundStartTime = performance.now()
-
-        const renderNextBatch = (currentIndex: number) => {
-          // 检查任务是否已被取消
-          if (this.currentRenderTaskId !== taskId) {
-            console.log(`[${new Date().toISOString()}] 渲染任务 ${taskId} 已取消，停止渲染`)
-            return
-          }
-
-          const batchStartTime = performance.now()
-          const batchSize = 200 // 每批渲染 200 行
-          const endIndex = Math.min(currentIndex + batchSize, targetCount)
-
-          console.log(`[${new Date().toISOString()}] 后台渲染批次: ${currentIndex}-${endIndex}`)
-
-          // 更新可见行数
-          this.visibleCount = endIndex
-          this.renderedCount = endIndex
-
-          const batchTime = performance.now() - batchStartTime
-          console.log(`[${new Date().toISOString()}] 批次渲染完成: ${batchSize} 行, 耗时 ${batchTime.toFixed(2)}ms`)
-
-          // 继续渲染下一批
-          if (endIndex < targetCount) {
-            // 使用 requestIdleCallback 或 setTimeout
-            if (typeof requestIdleCallback !== 'undefined') {
-              requestIdleCallback(() => renderNextBatch(endIndex))
-            } else {
-              setTimeout(() => renderNextBatch(endIndex), 0)
-            }
-          } else {
-            // 全部渲染完成
-            this.isRendering = false
-            const totalRenderTime = performance.now() - backgroundStartTime
-            console.log(`[${new Date().toISOString()}] ===== 后台渲染全部完成 ===== 总耗时 ${totalRenderTime.toFixed(2)}ms`)
-          }
-        }
-
-        // 启动后台渲染
-        if (typeof requestIdleCallback !== 'undefined') {
-          requestIdleCallback(() => renderNextBatch(initialBatch))
-        } else {
-          setTimeout(() => renderNextBatch(initialBatch), 0)
-        }
-      } else {
-        console.log(`[${new Date().toISOString()}] 无需后台渲染 (目标 <= 500)`)
-        this.isRendering = false
-      }
-    },
-
-    /**
      * 清理所有数据，释放内存
      * 在页面卸载或重新加载文件时调用
      */
@@ -674,8 +463,6 @@ export const useJsonlStore = defineStore('jsonl', {
       }
 
       // 重置计数器
-      this.visibleCount = 500
-      this.renderedCount = 0
       this.loadedCount = 0
       this.totalCount = 0
 
@@ -684,7 +471,6 @@ export const useJsonlStore = defineStore('jsonl', {
       this.lastFilterParams = null
 
       // 重置状态
-      this.isRendering = false
       this.isBackgroundLoading = false
 
       console.log(`[${new Date().toISOString()}] Store 数据清理完成`)

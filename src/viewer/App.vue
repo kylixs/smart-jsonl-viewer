@@ -215,26 +215,23 @@
 
       <!-- JSON Lines 显示区域 -->
       <div v-else class="jsonl-content">
-        <div v-if="store.filteredCount === 0 && store.hasSearch" class="no-results">
+        <!-- 有数据时显示虚拟滚动列表 -->
+        <VirtualScrollList
+          v-if="store.filteredCount > 0"
+          ref="virtualScrollListRef"
+          :items="store.filteredLines"
+          @window-change="(v: { startIndex: number; endIndex: number }) => console.log('[App] window-change:', v)"
+          @scroll="handleScroll"
+        >
+          <template #default="{ item }">
+            <JsonLineItem :line="item" />
+          </template>
+        </VirtualScrollList>
+
+        <!-- 无数据时显示提示 -->
+        <div v-else-if="store.hasSearch" class="no-results">
           <p>😕 没有找到匹配的结果</p>
           <p class="hint">尝试使用其他关键字或切换过滤模式</p>
-        </div>
-        <div v-else class="lines-list">
-          <JsonLineItem
-            v-for="line in store.displayLines"
-            :key="line.id"
-            :line="line"
-          />
-
-          <!-- 加载更多提示 -->
-          <div v-if="store.hasMore" class="load-more">
-            <div class="load-more-info">
-              已显示 {{ store.displayLines.length }} / {{ store.filteredCount }} 行
-            </div>
-            <button class="load-more-btn" @click="store.loadMore()">
-              加载更多 ({{ Math.min(store.batchSize, store.filteredCount - store.displayLines.length) }} 行)
-            </button>
-          </div>
         </div>
       </div>
     </main>
@@ -330,17 +327,6 @@
         </svg>
       </button>
     </div>
-
-    <!-- 后台加载/渲染进度条（底部悬浮，半透明） -->
-    <div v-if="store.isBackgroundLoading || store.isRendering" class="loading-progress">
-      <div class="loading-progress-content">
-        <span class="loading-progress-text">{{ progressText }}</span>
-        <span class="loading-progress-count">{{ progressCount }}</span>
-        <div class="loading-progress-bar">
-          <div class="loading-progress-fill" :style="{ width: progressPercentage + '%' }"></div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -350,6 +336,7 @@ import { useI18n } from 'vue-i18n'
 import { useJsonlStore } from './stores/jsonlStore'
 import SearchFilter from './components/SearchFilter.vue'
 import JsonLineItem from './components/JsonLineItem.vue'
+import VirtualScrollList from './components/VirtualScrollList.vue'
 import { exportToJsonLines, exportToJson } from './utils/parser'
 import { getSettings, saveSettings } from './utils/settings'
 import { availableLocales, setLocale, getLocale } from './i18n'
@@ -357,6 +344,7 @@ import { availableLocales, setLocale, getLocale } from './i18n'
 const { t } = useI18n()
 
 const store = useJsonlStore()
+const virtualScrollListRef = ref<any>(null)  // 使用any避免泛型组件的类型复杂性
 const isDragging = ref(false)
 const error = ref('')
 const showPasteDialog = ref(false)
@@ -382,41 +370,8 @@ const isLoading = ref(false)
 const isAtTop = ref(true)
 const isAtBottom = ref(false)
 
-// 滚动配置：预留滚动的屏数（当内容很长时，先跳转到接近目标位置，然后再平滑滚动这么多屏）
-const SMOOTH_SCROLL_VIEWPORTS = 10
-
 const themeTitle = computed(() => {
   return store.isDark ? t('theme.light') : t('theme.dark')
-})
-
-// 进度相关计算属性
-const progressText = computed(() => {
-  if (store.isBackgroundLoading) {
-    return '正在加载...'
-  } else if (store.isRendering) {
-    return '正在渲染...'
-  }
-  return ''
-})
-
-const progressCount = computed(() => {
-  if (store.isBackgroundLoading) {
-    return `${store.loadedCount} / ${store.totalCount} 行`
-  } else if (store.isRendering) {
-    return `${store.renderedCount} / ${store.filteredCount} 行`
-  }
-  return ''
-})
-
-const progressPercentage = computed(() => {
-  if (store.isBackgroundLoading) {
-    if (store.totalCount === 0) return 0
-    return Math.floor((store.loadedCount / store.totalCount) * 100)
-  } else if (store.isRendering) {
-    if (store.filteredCount === 0) return 0
-    return Math.floor((store.renderedCount / store.filteredCount) * 100)
-  }
-  return 0
 })
 
 // 检测是否为自动加载模式（来自页面拦截）
@@ -463,15 +418,12 @@ onMounted(() => {
   // 监听来自 content script 的消息
   window.addEventListener('message', handleMessage)
 
-  // 监听滚动事件
-  window.addEventListener('scroll', handleScroll)
   // 初始化滚动状态
   handleScroll()
 })
 
 onBeforeUnmount(() => {
   // 清理事件监听器
-  window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('message', handleMessage)
 
   // 清空 Store 数据，释放内存
@@ -546,7 +498,8 @@ function handleGlobalDrop(event: DragEvent) {
 async function loadFile(file: File) {
   const funcStartTime = performance.now()
   console.log(`[${new Date().toISOString()}] ########## loadFile 开始 ##########`)
-  console.log(`[${new Date().toISOString()}] 文件名: ${file.name}, 大小: ${file.size} 字节`)
+  console.log(`[${new Date().toISOString()}] 文件对象:`, file)
+  console.log(`[${new Date().toISOString()}] 文件名: ${file.name}, 大小: ${file.size} 字节, 类型: ${file.type}, lastModified: ${file.lastModified}`)
 
   try {
     const readStartTime = performance.now()
@@ -554,6 +507,7 @@ async function loadFile(file: File) {
     const readTime = performance.now() - readStartTime
     console.log(`[${new Date().toISOString()}] 文件读取完成: ${text.length} 字符, 耗时 ${readTime.toFixed(2)}ms`)
     console.log(`[${new Date().toISOString()}] 文件前200字符: ${text.substring(0, 200)}`)
+    console.log(`[${new Date().toISOString()}] 文件最后200字符: ${text.substring(Math.max(0, text.length - 200))}`)
 
     const loadStartTime = performance.now()
     store.loadText(text)
@@ -561,9 +515,12 @@ async function loadFile(file: File) {
     console.log(`[${new Date().toISOString()}] store.loadText 完成, 耗时 ${loadTime.toFixed(2)}ms`)
 
     // 更新 URL 显示文件名（方便浏览器历史记录）
+    const oldUrl = window.location.href
     const newUrl = new URL(window.location.href)
     newUrl.searchParams.set('file', file.name)
     newUrl.searchParams.set('size', file.size.toString())
+    console.log(`[${new Date().toISOString()}] URL 更新前: ${oldUrl}`)
+    console.log(`[${new Date().toISOString()}] URL 更新后: ${newUrl.toString()}`)
     window.history.pushState({ file: file.name, size: file.size }, '', newUrl.toString())
     console.log(`[${new Date().toISOString()}] URL 已更新: ${newUrl.toString()}`)
 
@@ -689,77 +646,25 @@ function handleLanguageChange() {
 
 // 滚动相关函数
 function handleScroll() {
-  const scrollTop = window.scrollY || document.documentElement.scrollTop
-  const scrollHeight = document.documentElement.scrollHeight
-  const clientHeight = document.documentElement.clientHeight
-
-  // 判断是否在顶部（容差5px）
-  isAtTop.value = scrollTop <= 5
-
-  // 判断是否在底部（容差5px）
-  isAtBottom.value = scrollTop + clientHeight >= scrollHeight - 5
-
-  // 自动加载更多：当距离底部不到 500px 且还有更多数据时
-  const distanceToBottom = scrollHeight - scrollTop - clientHeight
-  if (distanceToBottom < 500 && store.hasMore) {
-    store.loadMore()
+  // 由于滚动现在在VirtualScrollList内部，我们需要从VirtualScrollList获取状态
+  if (virtualScrollListRef.value) {
+    const scrollEngine = virtualScrollListRef.value.getScrollEngine()
+    if (scrollEngine) {
+      isAtBottom.value = scrollEngine.isAtBottom()
+      isAtTop.value = scrollEngine.isAtTop()
+    }
   }
 }
 
 function scrollToTop() {
-  const currentScroll = window.scrollY || document.documentElement.scrollTop
-  const viewportHeight = window.innerHeight
-  const threshold = viewportHeight * (SMOOTH_SCROLL_VIEWPORTS + 2)
-
-  if (currentScroll > threshold) {
-    // 距离太远，先快速跳转到接近顶部的位置，预留指定屏数进行平滑滚动
-    window.scrollTo({
-      top: viewportHeight * SMOOTH_SCROLL_VIEWPORTS,
-      behavior: 'instant'
-    })
-    // 短暂延迟后再平滑滚动到顶部
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      })
-    }, 50)
-  } else {
-    // 距离较近，直接平滑滚动
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
+  if (virtualScrollListRef.value) {
+    virtualScrollListRef.value.scrollToTop(true)
   }
 }
 
 function scrollToBottom() {
-  const currentScroll = window.scrollY || document.documentElement.scrollTop
-  const scrollHeight = document.documentElement.scrollHeight
-  const viewportHeight = window.innerHeight
-  const threshold = viewportHeight * (SMOOTH_SCROLL_VIEWPORTS + 2)
-  const distanceToBottom = scrollHeight - currentScroll - viewportHeight
-
-  if (distanceToBottom > threshold) {
-    // 距离太远，先快速跳转到接近底部的位置，预留指定屏数进行平滑滚动
-    const jumpTarget = scrollHeight - viewportHeight * SMOOTH_SCROLL_VIEWPORTS
-    window.scrollTo({
-      top: jumpTarget,
-      behavior: 'instant'
-    })
-    // 短暂延迟后再平滑滚动到底部
-    setTimeout(() => {
-      window.scrollTo({
-        top: scrollHeight,
-        behavior: 'smooth'
-      })
-    }, 50)
-  } else {
-    // 距离较近，直接平滑滚动
-    window.scrollTo({
-      top: scrollHeight,
-      behavior: 'smooth'
-    })
+  if (virtualScrollListRef.value) {
+    virtualScrollListRef.value.scrollToBottom(true)
   }
 }
 
@@ -829,10 +734,14 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-size: 13px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 #app {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #fff;
   color: #333;
   transition: background 0.3s, color 0.3s;
@@ -1529,6 +1438,8 @@ body {
 .jsonl-content {
   background: #fff;
   padding: 0;
+  height: calc(100vh - 80px); /* 填充整个视口高度，减去header高度 */
+  overflow: hidden; /* 防止外层滚动条，只使用 VirtualScrollList 的滚动 */
 }
 
 .lines-list {

@@ -1,15 +1,15 @@
 /**
- * 虚拟滚动核心实现
- * 只渲染可见区域 + 缓冲区的内容，自动释放超出范围的 DOM
+ * 动态高度虚拟滚动核心实现
+ * 支持可变高度的虚拟滚动，每个数据项的实际高度可以动态变化（如展开/折叠）
  */
 
 export interface VirtualScrollConfig {
-  // 每行的估计高度（像素）
-  itemHeight: number
-  // 视窗高度（行数）- 可动态调整
-  viewportRows: number
-  // 缓冲区大小（前后各保留多少行）
+  // 视窗高度（像素）- 可动态调整
+  viewportHeight: number
+  // 缓冲区大小（像素）- 前后各保留多少像素
   bufferSize: number
+  // 每项的默认估计高度（用于初始计算，后续会被实际高度覆盖）
+  defaultItemHeight: number
 }
 
 export interface VirtualScrollState {
@@ -17,17 +17,15 @@ export interface VirtualScrollState {
   totalCount: number
   // 滚动位置（像素）
   scrollTop: number
-  // 当前视窗的起始索引
+  // 当前视窗的数据索引范围（基于 scrollTop 和 viewportHeight 计算得出）
   startIndex: number
-  // 当前视窗的结束索引（不含）
   endIndex: number
-  // 实际渲染的起始索引（包含缓冲区）
+  // 实际渲染的数据索引范围（包含缓冲区）
   renderStartIndex: number
-  // 实际渲染的结束索引（包含缓冲区）
   renderEndIndex: number
-  // 虚拟容器总高度（用于滚动条）
+  // 虚拟容器总高度（用于滚动条）- 所有项的实际高度之和
   totalHeight: number
-  // 偏移量（用于定位可见区域）
+  // 内容区域的 Y 偏移量（用于定位可见内容）- 等于 renderStartIndex 的起始位置
   offsetY: number
 }
 
@@ -41,7 +39,22 @@ export interface ScrollToOptions {
 }
 
 /**
- * 虚拟滚动管理器
+ * 动态高度虚拟滚动管理器
+ *
+ * 核心概念：
+ * 1. Data: 数据源数组，每个 item 可以有可变高度
+ * 2. Height Cache: 存储每个 item 的实际高度（初始为 defaultItemHeight，渲染后更新为实际高度）
+ * 3. Position Cache: 预计算每个 item 的起始位置（基于累积高度）
+ * 4. Scroll: 当前 scrollTop 像素位置
+ * 5. Viewport: 可视区域高度
+ * 6. Render: 基于滚动位置计算需要渲染的 item 范围
+ *
+ * 计算公式：
+ * - itemPosition[i] = sum(heightCache[0..i-1])  # item i 的起始位置
+ * - totalHeight = sum(heightCache[0..n-1])      # 总高度
+ * - startIndex = 第一个 position >= scrollTop 的 item
+ * - endIndex = 最后一个 position <= scrollTop + viewportHeight 的 item
+ * - offsetY = itemPosition[renderStartIndex]    # 内容区域偏移量
  */
 export class VirtualScrollManager {
   private config: VirtualScrollConfig
@@ -49,6 +62,11 @@ export class VirtualScrollManager {
   private container: HTMLElement | null = null
   private isDestroyed = false
   private scrollRAF: number | null = null
+
+  // 高度缓存：itemIndex -> 实际高度（像素）
+  private heightCache: Map<number, number> = new Map()
+  // 位置缓存：itemIndex -> 起始位置（像素）
+  private positionCache: Map<number, number> = new Map()
 
   constructor(config: VirtualScrollConfig) {
     this.config = config
@@ -77,17 +95,79 @@ export class VirtualScrollManager {
    * 设置总数据量
    */
   setTotalCount(count: number) {
+    const oldCount = this.state.totalCount
     this.state.totalCount = count
-    this.state.totalHeight = count * this.config.itemHeight
+
+    // 如果数据量减少，清除超出范围的高度缓存
+    if (count < oldCount) {
+      for (let i = count; i < oldCount; i++) {
+        this.heightCache.delete(i)
+        this.positionCache.delete(i)
+      }
+    }
+
+    this.rebuildPositionCache()
     this.updateViewport()
   }
 
   /**
-   * 动态调整视窗高度（行数）
+   * 动态调整视窗高度（像素）
    */
-  setViewportRows(rows: number) {
-    this.config.viewportRows = rows
+  setViewportHeight(height: number) {
+    this.config.viewportHeight = height
     this.updateViewport()
+  }
+
+  /**
+   * 更新指定索引项的高度（当展开/折叠时调用）
+   */
+  updateItemHeight(index: number, height: number) {
+    if (index < 0 || index >= this.state.totalCount) return
+
+    const oldHeight = this.heightCache.get(index) || this.config.defaultItemHeight
+    const heightDelta = height - oldHeight
+
+    // 更新高度缓存
+    this.heightCache.set(index, height)
+
+    // 如果高度变化，需要更新后续所有项的位置缓存
+    if (heightDelta !== 0) {
+      this.rebuildPositionCache(index + 1) // 从变化项的下一项开始重建
+
+      // 更新总高度
+      this.state.totalHeight += heightDelta
+
+      if (import.meta.env.DEV) {
+        console.log(`[VirtualScroll] Item ${index} 高度变化: ${oldHeight}px -> ${height}px, 总高度: ${this.state.totalHeight}px`)
+      }
+    }
+
+    // 更新视窗
+    this.updateViewport()
+  }
+
+  /**
+   * 重建位置缓存（从指定索引开始）
+   */
+  private rebuildPositionCache(fromIndex: number = 0) {
+    let currentPosition = 0
+
+    // 计算重建点的起始位置
+    if (fromIndex > 0) {
+      const prevPosition = this.positionCache.get(fromIndex - 1)
+      if (prevPosition !== undefined) {
+        currentPosition = prevPosition + (this.heightCache.get(fromIndex - 1) || this.config.defaultItemHeight)
+      }
+    }
+
+    // 重建从 fromIndex 开始的位置缓存
+    for (let i = fromIndex; i < this.state.totalCount; i++) {
+      this.positionCache.set(i, currentPosition)
+      currentPosition += this.heightCache.get(i) || this.config.defaultItemHeight
+    }
+
+    // 更新总高度
+    this.state.totalHeight = currentPosition
   }
 
   /**
@@ -110,25 +190,49 @@ export class VirtualScrollManager {
   }
 
   /**
-   * 更新视窗范围
+   * 更新视窗范围（基于动态高度）
    */
   private updateViewport() {
-    const { itemHeight, viewportRows, bufferSize } = this.config
+    const { viewportHeight, bufferSize } = this.config
     const { scrollTop, totalCount } = this.state
 
-    // 计算可见区域的起始和结束索引
-    const startIndex = Math.floor(scrollTop / itemHeight)
-    const endIndex = Math.min(
-      startIndex + viewportRows,
-      totalCount
-    )
+    // 如果没有数据，重置到初始状态
+    if (totalCount === 0) {
+      this.state.startIndex = 0
+      this.state.endIndex = 0
+      this.state.renderStartIndex = 0
+      this.state.renderEndIndex = 0
+      this.state.offsetY = 0
+      return
+    }
 
-    // 计算包含缓冲区的渲染范围
-    const renderStartIndex = Math.max(0, startIndex - bufferSize)
-    const renderEndIndex = Math.min(totalCount, endIndex + bufferSize)
+    // 使用二分查找找到第一个位置 >= scrollTop 的 item
+    let startIndex = this.findItemIndexByPosition(scrollTop)
+    if (startIndex === -1) startIndex = totalCount - 1
 
-    // 计算偏移量（用于定位）
-    const offsetY = renderStartIndex * itemHeight
+    // 找到最后一个位置 <= scrollTop + viewportHeight 的 item
+    let endIndex = this.findLastVisibleItemIndex(scrollTop + viewportHeight)
+    if (endIndex === -1) endIndex = totalCount - 1
+
+    // 确保 startIndex 和 endIndex 有效
+    startIndex = Math.max(0, startIndex)
+    endIndex = Math.min(totalCount - 1, endIndex)
+    endIndex = Math.max(startIndex, endIndex)
+
+    // 计算包含缓冲区的渲染范围（转换为像素范围后再转回索引）
+    let renderStartIndex = this.findItemIndexByPosition(scrollTop - bufferSize)
+    if (renderStartIndex === -1) renderStartIndex = 0
+
+    let renderEndIndex = this.findLastVisibleItemIndex(scrollTop + viewportHeight + bufferSize)
+    if (renderEndIndex === -1) renderEndIndex = totalCount - 1
+
+    // 确保渲染范围有效
+    renderStartIndex = Math.max(0, renderStartIndex)
+    renderEndIndex = Math.min(totalCount - 1, renderEndIndex)
+    renderEndIndex = Math.max(renderStartIndex, renderEndIndex)
+
+    // 计算偏移量（renderStartIndex 的起始位置）
+    const offsetY = this.positionCache.get(renderStartIndex) || 0
 
     this.state.startIndex = startIndex
     this.state.endIndex = endIndex
@@ -138,11 +242,66 @@ export class VirtualScrollManager {
 
     if (import.meta.env.DEV) {
       console.log('[VirtualScroll] 视窗更新:', {
-        可见区域: `${startIndex} - ${endIndex} (${endIndex - startIndex} 行)`,
-        渲染区域: `${renderStartIndex} - ${renderEndIndex} (${renderEndIndex - renderStartIndex} 行)`,
-        偏移量: `${offsetY}px`
+        总数据量: totalCount,
+        滚动位置: `${scrollTop}px`,
+        可见区域: `${startIndex} - ${endIndex} (${endIndex - startIndex + 1} 行)`,
+        渲染区域: `${renderStartIndex} - ${renderEndIndex} (${renderEndIndex - renderStartIndex + 1} 行)`,
+        偏移量: `${offsetY}px`,
+        总高度: `${this.state.totalHeight}px`
       })
     }
+  }
+
+  /**
+   * 根据滚动位置查找对应的 item 索引（二分查找）
+   * 返回第一个 position >= targetPosition 的 item 索引
+   */
+  private findItemIndexByPosition(targetPosition: number): number {
+    if (this.state.totalCount === 0) return -1
+
+    let left = 0
+    let right = this.state.totalCount - 1
+    let result = this.state.totalCount - 1
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2)
+      const position = this.positionCache.get(mid) || 0
+
+      if (position >= targetPosition) {
+        result = mid
+        right = mid - 1
+      } else {
+        left = mid + 1
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * 查找最后一个可见的 item 索引
+   * 返回最后一个 position < endPosition 的 item 索引
+   */
+  private findLastVisibleItemIndex(endPosition: number): number {
+    if (this.state.totalCount === 0) return -1
+
+    let left = 0
+    let right = this.state.totalCount - 1
+    let result = 0
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2)
+      const position = this.positionCache.get(mid) || 0
+
+      if (position < endPosition) {
+        result = mid
+        left = mid + 1
+      } else {
+        right = mid - 1
+      }
+    }
+
+    return result
   }
 
   /**
@@ -189,24 +348,27 @@ export class VirtualScrollManager {
    */
   scrollToIndex(index: number, options: ScrollToOptions = {}) {
     const { align = 'start', smooth = false, highlight = false } = options
-    const { itemHeight, viewportRows } = this.config
+
+    // 获取目标项的位置
+    const targetPosition = this.positionCache.get(index) ?? index * this.config.defaultItemHeight
+    const itemHeight = this.heightCache.get(index) ?? this.config.defaultItemHeight
 
     let scrollTop: number
 
     switch (align) {
       case 'start':
-        scrollTop = index * itemHeight
+        scrollTop = targetPosition
         break
       case 'center':
-        scrollTop = (index - Math.floor(viewportRows / 2)) * itemHeight
+        scrollTop = targetPosition - (this.config.viewportHeight / 2) + (itemHeight / 2)
         break
       case 'end':
-        scrollTop = (index - viewportRows + 1) * itemHeight
+        scrollTop = targetPosition - this.config.viewportHeight + itemHeight
         break
     }
 
     // 边界检查
-    scrollTop = Math.max(0, Math.min(scrollTop, this.state.totalHeight - viewportRows * itemHeight))
+    scrollTop = Math.max(0, Math.min(scrollTop, this.state.totalHeight - this.config.viewportHeight))
 
     // 执行滚动
     if (this.container) {
@@ -321,8 +483,8 @@ export function calculateViewportRows(
  */
 export function createDefaultConfig(): VirtualScrollConfig {
   return {
-    itemHeight: 40,       // 每行 40px
-    viewportRows: 200,    // 默认显示 200 行
-    bufferSize: 100       // 前后各保留 100 行
+    defaultItemHeight: 40,  // 每项默认 40px
+    viewportHeight: 800,    // 默认视窗高度 800px (相当于 20 行)
+    bufferSize: 400         // 前后各保留 400px 缓冲区
   }
 }

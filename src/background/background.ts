@@ -16,7 +16,7 @@ chrome.action.onClicked.addListener(() => {
 })
 
 // 监听来自 content script 的消息
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'RENDER_JSONL') {
     // 可以在这里处理来自 content script 的消息
     console.log('Received JSONL data from content script')
@@ -33,9 +33,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   // 处理文件读取请求（需要用户在 chrome://extensions/ 中启用 "允许访问文件网址"）
   if (message.type === 'FETCH_FILE') {
-    console.log('[Background] 收到文件读取请求:', message.url)
+    const requestUrl = message.url
+    const requestId = message.requestId || 'unknown'
+    const tabId = sender.tab?.id
 
-    fetch(message.url)
+    console.log('[Background] 收到文件读取请求:', {
+      requestId: requestId,
+      url: requestUrl,
+      tabId: tabId
+    })
+
+    fetch(requestUrl)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -43,12 +51,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return response.text()
       })
       .then((content) => {
-        console.log('[Background] 文件读取成功，大小:', content.length)
-        sendResponse({ success: true, content })
+        console.log('[Background] 文件读取成功:', {
+          requestId: requestId,
+          url: requestUrl,
+          size: content.length,
+          tabId: tabId
+        })
+        sendResponse({ success: true, content, requestId: requestId })
       })
       .catch((error) => {
-        console.error('[Background] 文件读取失败:', error)
-        sendResponse({ success: false, error: error.message })
+        console.error('[Background] 文件读取失败:', {
+          requestId: requestId,
+          url: requestUrl,
+          error: error.message,
+          tabId: tabId
+        })
+        sendResponse({ success: false, error: error.message, requestId: requestId })
       })
 
     // 返回 true 表示异步响应

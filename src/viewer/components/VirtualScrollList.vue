@@ -47,7 +47,7 @@ const props = withDefaults(defineProps<Props>(), {
   initialWindowSize: 100,
   loadThreshold: 200,              // 降低到200px，更容易触发
   batchSize: 50,
-  maxWindowSize: Number.MAX_SAFE_INTEGER
+  maxWindowSize: 100               // 限制窗口大小，防止DOM无限累积
 })
 
 // Emits

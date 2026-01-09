@@ -94,6 +94,8 @@ export class VirtualScrollManager {
    * 处理滚动事件（带 RAF 防抖优化）
    */
   handleScroll(scrollTop: number) {
+    if (this.isDestroyed) return
+
     // 取消之前的 RAF
     if (this.scrollRAF) {
       cancelAnimationFrame(this.scrollRAF)
@@ -297,7 +299,10 @@ export class VirtualScrollManager {
 
     this.isDestroyed = true
     this.container = null
-    console.log('[VirtualScroll] 已销毁')
+
+    if (import.meta.env.DEV) {
+      console.log('[VirtualScroll] 已销毁')
+    }
   }
 }
 

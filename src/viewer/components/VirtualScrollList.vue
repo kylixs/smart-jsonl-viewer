@@ -10,10 +10,9 @@
     <!-- 实际渲染的内容区域 -->
     <div class="content-wrapper" :style="contentStyle">
       <slot
-        v-for="(item, index) in visibleItems"
+        v-for="item in visibleItems"
         :key="item.id"
         :item="item"
-        :index="item.index"
       >
         <!-- 默认插槽，父组件可以自定义渲染 -->
         <div class="virtual-item" :data-index="item.index">
@@ -28,7 +27,6 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   VirtualScrollManager,
-  createDefaultConfig,
   type VirtualScrollConfig,
   type ScrollToOptions
 } from '../utils/virtualScroll'
@@ -237,7 +235,7 @@ defineExpose({
   /**
    * 获取滚动引擎（供外部高级使用）
    */
-  getScrollEngine(): VirtualScrollManager | null {
+  getScrollEngine() {
     return scrollManager.value
   },
 
